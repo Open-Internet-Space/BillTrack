@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+
+# Virtual env
+venv/
+.venv/
+
+# Django runtime/generated
+db.sqlite3
+*.sqlite3
+*.sqlite3-*
+*.db
+staticfiles/
+media/
+
+# Frontend dependencies/build
+frontend/node_modules/
+frontend/build/
+frontend_build/
+
+# Local app temp/output
+.codex-remote-attachments/
+.codex-attachments/
+outputs/
+.tmp.drivedownload/
+.tmp.driveupload/
+backups/
+instance/
+billtrack-backup-*.zip
+*.log
+
+# Generated documents and test reports stay local
+*.pdf
+*.docx
+*.xlsx
+*.csv
+test-results/
+test-artifacts/
+playwright-report/
+coverage/
+
+# OS/editor
+desktop.ini
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+estate_project/.env
+frontend/.evn
+
+# Private downloaded exports and archives
+billtrack-data-*.json
+billtrack-before-import-*.json
+*.zip
+*.7z
+*.tar
+*.tar.gz

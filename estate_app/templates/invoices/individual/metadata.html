@@ -1,0 +1,27 @@
+  <!-- ── META: Invoice Details + Billed To ── -->
+  <div class="meta-row">
+    <div class="meta-block">
+      {% if invoice_settings.billed_from %}
+      <div class="meta-label">Billed From</div>
+      <div class="bank-line">{{ invoice_settings.billed_from|linebreaksbr }}</div>
+      {% endif %}
+      <div class="meta-label">Invoice Details</div>
+      <div class="meta-line"><span class="meta-key">Ref. No.</span><span class="meta-val inv-no">{{ dispatch_ref_no }}</span></div>
+        <br>
+      <div class="meta-line"><span class="meta-key">Invoice Date</span><span class="meta-val">__________/_________/20_________<!--{{ invoice_date }}--></span></div>
+        <br>
+      <div class="meta-line"><span class="meta-key">Billing Period</span><span class="meta-val">{{ billing_period }}</span></div>
+      <div class="meta-line"><span class="meta-key">Supplier GSTIN</span><span class="meta-val">{{ invoice_settings.supplier_gstin }}</span></div>
+      <div class="meta-line"><span class="meta-key">Place of Supply</span><span class="meta-val">{{ invoice_settings.place_of_supply }}</span></div>
+    </div>
+    <div class="meta-divider"></div>
+    <div class="meta-block">
+      <div class="meta-label">Billed To</div>
+      <div class="meta-line"><span class="recipient-name">{{ bill.tenant.name }}</span></div>
+      <div class="meta-line"><span class="meta-key">Type</span><span class="meta-val">{{ bill.tenant.type }}</span></div>
+      <div class="meta-line"><span class="meta-key">Address</span><span class="meta-val">{% if bill.tenant.address_not_provided %}Not Provided{% else %}{{ bill.tenant.address|default:"Not Provided" }}{% endif %}</span></div>
+      <div class="meta-line"><span class="meta-key">GSTIN</span><span class="meta-val">{% if bill.tenant.gstin_not_provided %}Not Provided{% else %}{{ bill.tenant.gstin|default:"-" }}{% endif %}</span></div>
+      <div class="meta-line"><span class="meta-key">Contact</span><span class="meta-val">{% if bill.tenant.contact_not_provided %}Not Provided{% else %}{{ bill.tenant.contact|default:"-" }}{% endif %}</span></div>
+      <div class="meta-line"><span class="meta-key">Email</span><span class="meta-val">{% if bill.tenant.email_not_provided %}Not Provided{% else %}{{ bill.tenant.email|default:"-" }}{% endif %}</span></div>
+    </div>
+  </div>

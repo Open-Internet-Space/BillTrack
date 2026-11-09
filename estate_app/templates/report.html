@@ -1,0 +1,23 @@
+{% load report_tags %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>{{ report.title }}</title>
+<style>
+@page { size: A4 landscape; margin: 13mm 10mm 16mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #475569; } }
+body { font-family: "DejaVu Sans", sans-serif; color: #172b3a; font-size: 8pt; line-height: 1.4; }
+h1 { font-size: 16pt; margin: 0 0 3mm; } h2 { font-size: 13pt; margin: 5mm 0 2mm; }
+p { margin: 1.5mm 0; } .metadata, .notes { color: #475569; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; margin-top: 5mm; font-size: 7.5pt; }
+thead { display: table-header-group; } th { background: #18354b; color: white; text-align: left; }
+th, td { padding: 2mm 1.3mm; border: 0.2mm solid #cbd5e1; overflow-wrap: anywhere; vertical-align: top; }
+.numeric { text-align: right; font-variant-numeric: tabular-nums; } .number { width: 10mm; }
+tr { break-inside: avoid; } .total { font-weight: bold; background: #e8eff4; }
+.notes { margin-top: 5mm; font-size: 7.5pt; }
+</style></head><body>
+<h1>{{ report.organisation }}</h1><p>{{ report.department }}</p>
+<h2>{{ report.title }}</h2><p>{{ report.filters }}</p>
+<p class="metadata">Generated: {{ report.generated_at }} · {{ report.count }} records · All amounts in INR</p>
+<table><thead><tr><th class="number">No.</th>{% for column in report.columns %}<th {% if column.numeric %}class="numeric"{% endif %}>{{ column.label }}</th>{% endfor %}</tr></thead>
+<tbody>{% for row in report.rows %}<tr><td>{{ forloop.counter }}</td>{% for column in report.columns %}<td {% if column.numeric %}class="numeric"{% endif %}>{{ row|report_value:column.key }}</td>{% endfor %}</tr>{% empty %}<tr><td colspan="{{ report.columns|length|add:'1' }}">No records match these filters.</td></tr>{% endfor %}
+<tr class="total"><td>Totals</td>{% for column in report.columns %}<td {% if column.numeric %}class="numeric"{% endif %}>{{ report.totals|report_value:column.key }}</td>{% endfor %}</tr></tbody></table>
+<div class="notes">{% for note in report.notes %}<p>{{ note }}</p>{% endfor %}</div>
+</body></html>

@@ -1,0 +1,6 @@
+@import "./styles/base.css";
+@import "./styles/workspace.css";
+@import "./styles/identity.css";
+@import "./styles/auth.css";
+@import "./styles/reports.css";
+@import "./styles/feedback.css";

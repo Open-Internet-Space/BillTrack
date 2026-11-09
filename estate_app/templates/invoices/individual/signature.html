@@ -1,0 +1,9 @@
+  <!-- ── SIGNATURE ── -->
+  {% if invoice_settings.copy_to %}<div class="copy-to"><span class="copy-to-label">Copy to:</span> <span class="copy-to-list">{{ invoice_settings.copy_to|linebreaksbr }}</span></div>{% endif %}
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <div class="sig-space"></div>
+      <div class="sig-name">{{ invoice_settings.signing_authority|linebreaksbr }}</div>
+    </div>
+  </div>

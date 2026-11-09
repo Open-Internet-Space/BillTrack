@@ -1,0 +1,31 @@
+  <div class="sec-title">Consolidated Month-wise Charges</div>
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th style="width:36px">#</th>
+        <th>Period</th>
+
+        <th class="right">Rent (Rs.)</th>
+        <th class="right">Electricity Consumption</th>
+        <th class="right">Electricity (Rs.)</th>
+        <th class="right">Water (Rs.)</th>
+        <th class="right">GST (Rs.)</th>
+        <th class="right">Total (Rs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in invoice.line_items %}
+      <tr>
+        <td class="center">{{ forloop.counter }}</td>
+        <td>{{ item.period }}</td>
+
+        <td class="right">{{ item.rent }}</td>
+        <td class="right">{% if item.electric_reading %}{{ item.electric_reading }} unit{% else %}-{% endif %}</td>
+        <td class="right">{{ item.electric }}</td>
+        <td class="right">{{ item.water }}</td>
+        <td class="right">{{ item.gst_on_rent }}</td>
+        <td class="right">{{ item.total_amount }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>

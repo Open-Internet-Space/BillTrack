@@ -1,0 +1,6 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'estate_app/cursor.css' %}" media="screen">
+{% endblock %}

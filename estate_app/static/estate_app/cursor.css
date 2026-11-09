@@ -1,0 +1,4 @@
+@media screen and (pointer: fine) {
+  html, body { cursor: url("./cursor.svg") 3 3, default; }
+  a[href], summary { cursor: pointer; }
+}

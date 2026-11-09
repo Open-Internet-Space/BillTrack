@@ -1,0 +1,10 @@
+<section class="module" aria-labelledby="recovery-tools-title">
+  <h2 id="recovery-tools-title">Authenticator QR codes and recovery</h2>
+  {% if not original or original.pk == request.user.pk %}
+    <p><a href="{% url 'account-authenticator' %}">Set up my authenticator with a QR code</a> — confirm your current password before the key is displayed.</p>
+  {% else %}
+    <p>Personal authenticator setup is completed by the account owner at <a href="{% url 'account-authenticator' %}">Set up authenticator</a>, using their current password.</p>
+  {% endif %}
+  {% if request.user.is_superuser %}<p><a href="{% url 'admin-emergency-authenticator' %}">Superuser emergency TOTP QR code</a> — a special recovery key for any active, approved account, including accounts with their own authenticator.</p>{% endif %}
+  <p><a href="{% url 'account-recovery' %}">Email OTP recovery</a> · <a href="{% url 'totp-password-reset' %}">Authenticator or superuser emergency recovery</a></p>
+</section>

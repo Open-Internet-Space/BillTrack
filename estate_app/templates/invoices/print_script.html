@@ -1,0 +1,7 @@
+<script>
+function editInvoiceNote() {
+  const note = document.querySelector(".note-text");
+  const edited = window.prompt("Edit note for this print only (not saved)", note?.textContent || "");
+  if (edited !== null) document.querySelectorAll(".note-text").forEach(item => { item.textContent = edited; });
+}
+</script>

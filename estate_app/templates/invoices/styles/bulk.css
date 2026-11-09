@@ -1,0 +1,7 @@
+
+  .invoice { page-break-after: always; break-after: page; }
+  .invoice:last-of-type { page-break-after: auto; break-after: auto; }
+  @media print {
+    .invoice { page-break-after: always; break-after: page; }
+    .invoice:last-of-type { page-break-after: auto; break-after: auto; }
+  }

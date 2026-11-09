@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>Only email-verified applications can be approved. Approval grants normal Staff billing access, without Django admin access.</p>
+<p><strong>Staff can change billing records.</strong> Check the applicant's identity before approval.</p>
+<div class="results" style="overflow-x:auto">
+<table>
+  <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Verified</th><th scope="col">Status</th><th scope="col">Decision</th></tr></thead>
+  <tbody>
+  {% for account in page %}
+    <tr>
+      <td>{{ account.user.get_full_name|default:account.user.username }}</td>
+      <td>{{ account.user.email }}</td>
+      <td>{{ account.verified_at|default:'Not verified' }}</td>
+      <td>{{ account.get_status_display }}</td>
+      <td>{% if account.status == 'pending' %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="account" value="{{ account.pk }}">
+          {% if account.verified_at %}<button type="submit" name="decision" value="approve">Approve Staff access</button>{% endif %}
+          <button type="submit" name="decision" value="reject">Reject</button>
+        </form>
+      {% else %}{{ account.decided_by.username|default:'Existing account' }} {{ account.decided_at|default:'' }}{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="5">No account applications or email verifications yet.</td></tr>{% endfor %}
+  </tbody>
+</table>
+</div>
+<p>Page {{ page.number }} of {{ page.paginator.num_pages }}.
+{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">Previous</a>{% endif %}
+{% if page.has_next %}<a href="?page={{ page.next_page_number }}">Next</a>{% endif %}</p>
+{% endblock %}

@@ -1,0 +1,82 @@
+  /* ── Total Bar ── */
+  .total-bar {
+    background: var(--total-bg);
+    color: var(--total-fg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 20px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .total-words {
+    font-family: 'EB Garamond', serif;
+    font-size: 10.5pt;
+    font-style: italic;
+    opacity: 0.9;
+    max-width: 62%;
+  }
+  .total-amount {
+    text-align: right;
+  }
+  .total-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.75; }
+  .total-figure { font-family: 'EB Garamond', serif; font-size: 20pt; font-weight: 700; line-height: 1; }
+
+  /* ── Bank + Remarks ── */
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .bank-block, .remarks-block { padding: 12px 20px; }
+  .footer-label {
+    font-size: 7.5pt; text-transform: uppercase; letter-spacing: 1.2px;
+    font-weight: 700; color: var(--light); margin-bottom: 8px;
+  }
+  .bank-line { font-size: 9pt; color: var(--mid); margin-bottom: 3px; }
+  .bank-val  { font-weight: 600; color: var(--ink); }
+  .remarks-text { font-size: 9pt; color: var(--mid); line-height: 1.55; }
+
+  /* ── Copy-to Distribution ── */
+  .copy-to {
+    padding: 10px 20px;
+    background: var(--shade);
+    border-bottom: 1px solid var(--rule);
+  }
+  .copy-to-label {
+    font-size: 8pt; text-transform: uppercase; letter-spacing: 1.2px;
+    font-weight: 700; color: var(--mid); display: inline;
+  }
+  .copy-to-list { display: inline; font-size: 9pt; color: var(--mid); }
+
+  /* ── Signature ── */
+  .sig-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 18px 24px 20px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .sig-box {
+    text-align: center;
+    min-width: 200px;
+  }
+  .sig-space { height: 44px; border-bottom: 1.5px solid var(--ink); margin-bottom: 5px; }
+  .sig-label { font-size: 8.5pt; color: var(--mid); }
+  .sig-name  { font-size: 9.5pt; font-weight: 700; color: var(--ink); }
+  .sig-desig { font-size: 8pt; color: var(--light); }
+
+  /* ── Penalty Note ── */
+  .penalty-note {
+    padding: 9px 20px;
+    background: #fff8e6;
+    border-top: 1px solid #e8d88a;
+    font-size: 8.5pt;
+    color: #7a5c00;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .penalty-note strong { color: #5a3e00; }

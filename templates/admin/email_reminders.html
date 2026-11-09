@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Email reminders</h1>
+<p>Preview is read-only. Send uses the current recorded balances and email addresses. At most one accepted reminder per allottee per day.</p>
+<p>Schedule relative to due date: −1, 0, +1, +7, +14, +26, +41, then every 15 days. Stop three calendar months after confirmed receipt.</p>
+<p>SMTP: {% if configured %}Configured{% else %}<strong>Not configured — add the sender and app password to the private .env.</strong>{% endif %}.
+Current configuration test: {% if verified %}accepted{% else %}not verified{% endif %}.</p>
+<div class="module">
+<h2>Sending mode</h2>
+<form method="post">{% csrf_token %}
+<input type="hidden" name="action" value="mode">
+<label><input type="checkbox" name="automatic_enabled" {% if config.automatic_enabled %}checked{% endif %}> Automatic daily sending at 9:30 AM India time</label>
+<p>The Windows mail task must be installed. Manual mode is the default. The PC must be awake and online; missed runs send only the latest applicable reminder.</p>
+<button type="submit">Save sending mode</button>
+</form>
+</div>
+<div class="module">
+<h2>Test your mailbox first</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="test">{{ test_form.as_p }}
+<button type="submit">Send non-financial test email</button></form>
+</div>
+<div class="module">
+<h2>Current preview</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="send">
+{% for group in groups %}
+<fieldset class="module">
+<h3><label><input type="checkbox" name="allottee" value="{{ group.uuid }}"> {{ group.allottee.name }} — {{ group.email }}</label></h3>
+<table><caption>Eligible outstanding bills</caption><thead><tr><th>Period / reference</th><th>Due date</th><th>Scheduled reminder</th><th>Principal</th><th>Penalty</th><th>Total (INR)</th></tr></thead>
+<tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
+<p>Combined total: INR {{ group.total|floatformat:2 }}</p>
+</fieldset>
+{% empty %}<p>No reminders are currently eligible.</p>{% endfor %}
+{% if groups %}<p>Only selected allottees will receive mail. Sending rechecks balances; there are no invoice attachments or external login links.</p>
+<button type="submit">Send reminders to selected allottees</button>{% endif %}
+</form>
+<h3>Skipped bills</h3><ul>{% for reason,count in skipped.items %}<li>{{ reason }}: {{ count }}</li>{% empty %}<li>None</li>{% endfor %}</ul>
+</div>
+<div class="module"><h2>Uncertain / interrupted submissions</h2>
+<p>Do not retry until you check provider activity. A message may have been accepted even if BillTrack could not record success.</p>
+{% for row in uncertain %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="release"><input type="hidden" name="delivery" value="{{ row.pk }}">
+<p>{{ row.send_date }} — {{ row.allottee_name }} — {{ row.recipient }} — {{ row.get_status_display }}</p>
+<label><input type="checkbox" name="confirmed_not_sent" required> I checked provider activity and confirm this email was not sent.</label>
+<button type="submit">Record review and allow retry</button></form>{% empty %}<p>No uncertain submissions.</p>{% endfor %}
+</div>
+<div class="module"><h2>Recent delivery history</h2>
+<p>Accepted means accepted by the SMTP server, not confirmed inbox delivery. <a href="{% url 'admin:estate_app_reminderdelivery_changelist' %}">Open all history</a>.</p>
+<table><thead><tr><th>Date</th><th>Allottee</th><th>Recipient</th><th>Status</th><th>Attempts</th><th>Action / error</th></tr></thead><tbody>
+{% for row in recent %}<tr><td>{{ row.send_date }}</td><td>{{ row.allottee_name }}</td><td>{{ row.recipient }}</td><td>{{ row.get_status_display }}</td><td>{{ row.attempts }}</td><td>{{ row.error }}</td></tr>{% empty %}<tr><td colspan="6">No reminders sent.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

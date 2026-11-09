@@ -1,0 +1,8 @@
+{% extends "admin/paginated_change_list.html" %}
+
+{% block object-tools-items %}
+  <li>
+    <a href="{% url 'admin:estate_app_bill_bulk_add' %}" class="addlink">Bulk add bills</a>
+  </li>
+  {{ block.super }}
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "admin/login.html" %}
+{% block content %}
+  {{ block.super }}
+  <p><a href="{% url 'totp-password-reset' %}">Reset password with authenticator code</a></p>
+  <p><a href="{% url 'account-recovery' %}">Reset password by email</a> · <a href="{% url 'account-signup' %}">Create account</a></p>
+  <p><a href="{% url 'account-verify-email' %}">Verify an existing account email</a></p>
+{% endblock %}

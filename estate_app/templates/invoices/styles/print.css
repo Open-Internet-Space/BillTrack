@@ -1,0 +1,30 @@
+  /* ════════════════════════════════
+     PRINT STYLES
+  ════════════════════════════════ */
+  @media print {
+    @page {
+      size: A4;
+      margin: 12mm 14mm 18mm 14mm;
+      @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font: 8.5pt 'Source Sans 3', sans-serif;
+        color: #4a4a6a;
+      }
+    }
+    html, body {
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      font-size: 10pt;
+    }
+    .print-bar { display: none !important; }
+    .invoice {
+      box-shadow: none !important;
+      border: none !important;
+      max-width: 100% !important;
+    }
+    .copy-band { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .inv-table thead tr { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .total-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { text-decoration: none; color: inherit; }
+  }

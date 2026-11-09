@@ -1,0 +1,59 @@
+  <!-- ── CHARGES TABLE ── -->
+  <div class="sec-title">Current Month Charges</div>
+  <table class="inv-table">
+    <thead>
+      <tr>
+        <th style="width:36px">#</th>
+        <th>Description</th>
+        <th class="center" style="width:80px">SAC</th>
+        <th class="right" style="width:95px">Amount (Rs.)</th>
+        <th class="center" style="width:60px">GST Rate</th>
+        <th class="right" style="width:85px">{% if is_igst %}IGST{% else %}CGST{% endif %} (Rs.)</th>
+        <th class="right" style="width:85px">{% if is_igst %}-{% else %}SGST{% endif %} (Rs.)</th>
+        <th class="right" style="width:100px">Total (Rs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rent Row -->
+      <tr>
+        <td class="center">1</td>
+        <td>
+          <div class="item-name">Rent </div>
+        </td>
+        <td class="center">997212</td>
+        <td class="right">{{ rent }}</td>
+        <td class="center">{{ gst_rate }}</td>
+        <td class="right">{% if is_igst %}{{ igst }}{% else %}{{ cgst }}{% endif %}</td>
+        <td class="right">{% if is_igst %}-{% else %}{{ sgst }}{% endif %}</td>
+        <td class="right">{{ rent_with_gst }}</td>
+      </tr>
+      <!-- Electricity Row -->
+      <tr>
+        <td class="center">2</td>
+        <td>
+          <div class="item-name">Electricity Charges</div>
+          <div class="item-sub"><strong>Consumption - {{ electric_reading }} unit</strong></div>
+        </td>
+        <td class="center">-</td>
+        <td class="right">{{ electric }}</td>
+        <td class="center">Nil</td>
+        <td class="right">-</td>
+        <td class="right">-</td>
+        <td class="right">{{ electric }}</td>
+      </tr>
+      <!-- Water Row -->
+      <tr>
+        <td class="center">3</td>
+        <td>
+          <div class="item-name">Water Charges</div>
+          <!--<div class="item-sub">{{ billing_period }} - Fixed monthly rate</div>-->
+        </td>
+        <td class="center">-</td>
+        <td class="right">{{ water }}</td>
+        <td class="center">Nil</td>
+        <td class="right">-</td>
+        <td class="right">-</td>
+        <td class="right">{{ water }}</td>
+      </tr>
+    </tbody>
+  </table>

@@ -1,0 +1,4 @@
+{% extends "accounts/base.html" %}
+{% block page_title %}Invoice setup required{% endblock %}
+{% block heading %}Invoice setup required{% endblock %}
+{% block account_content %}<p role="alert">{{ message }}</p>{% if request.user.is_staff %}<p><a href="{% url 'admin:estate_app_systemsettings_changelist' %}">Open System Settings</a></p>{% else %}<p>Ask an administrator to complete the invoice settings.</p>{% endif %}{% endblock %}

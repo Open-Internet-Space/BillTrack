@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Rollbacks and backup details</h1>
+<p>This page lists local recovery information only. It does not execute scripts, restore data, or download private archives.</p>
+<p><strong>A backup labelled for a feature can restore a whole earlier application version.</strong> It can remove later features too. Do not mix individual modules or use an older script against a newer installation.</p>
+<div class="module"><h2>Before any recovery</h2>
+<ol><li>Finish pending saves and preserve a fresh backup of the current records.</li>
+<li>On the server, check the installed source version: <code>{{ version_command }}</code>.</li>
+<li>Compare it with the snapshot's expected version, then read the named local instructions. Missing version metadata means manual review is required.</li>
+<li>Disable the relevant scheduled task before stopping it, so its repeating trigger cannot restart it during maintenance. Mail recovery also requires disabling the mail task.</li>
+<li>Use Administrator PowerShell on the server only after reviewing the procedure. Check login, balances, invoices and network access afterward.</li></ol>
+<p>Do not restore an older database merely to undo code: that can lose later work. Restoring old mail history can also make already-sent reminders eligible again. GitHub history is separate from local recovery.</p>
+</div>
+{% for section in sections %}
+<details class="module" {% if section.snapshots %}open{% endif %}>
+<summary><strong>{{ section.title }}</strong> — {{ section.snapshots|length }} local snapshot{{ section.snapshots|length|pluralize }}</summary>
+<p>{{ section.effect }}</p>
+{% for snapshot in section.snapshots %}
+<details><summary>{{ snapshot.name }} — manual compatibility review required</summary>
+<dl>
+<dt>Local folder</dt><dd><code style="overflow-wrap:anywhere">{{ snapshot.path }}</code></dd>
+<dt>Snapshot expects installed commit</dt><dd>{% if snapshot.expected_version %}<code>{{ snapshot.expected_version }}</code>{% else %}No version guard recorded; review the local instructions.{% endif %}</dd>
+{% if snapshot.previous_version %}<dt>Restores source commit</dt><dd><code>{{ snapshot.previous_version }}</code></dd>{% endif %}
+<dt>Standard artifacts found</dt><dd>{% for artifact in snapshot.artifacts %}{{ artifact }}{% if not forloop.last %}; {% endif %}{% empty %}Names vary by snapshot; review its local contents.{% endfor %}</dd>
+<dt>Recovery helper location</dt><dd>{% if snapshot.helper %}<code style="overflow-wrap:anywhere">{{ snapshot.helper }}</code>{% else %}No standard helper found. Follow the snapshot's instructions.{% endif %}</dd>
+<dt>Local instruction files</dt><dd>{% for note in snapshot.notes %}<p><code style="overflow-wrap:anywhere">{{ note }}</code></p>{% empty %}No standard instruction filename found; ask the installation administrator to review this snapshot.{% endfor %}</dd>
+</dl>
+<p>These are server-side paths, not files on the visiting PC. Archive contents and private configuration are never served here.</p>
+</details>
+{% empty %}<p>No local snapshot found for this part under the installation's backups folder.</p>{% endfor %}
+</details>
+{% endfor %}
+{% endblock %}

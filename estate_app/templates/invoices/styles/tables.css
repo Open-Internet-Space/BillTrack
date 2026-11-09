@@ -1,0 +1,80 @@
+  /* ── Items Table ── */
+  .inv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+  }
+  .inv-table thead tr {
+    background: var(--head-bg);
+    color: var(--head-fg);
+  }
+  .inv-table thead th {
+    padding: 7px 10px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 8.5pt;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .inv-table thead th.right { text-align: right; }
+  .inv-table thead th.center { text-align: center; }
+
+  .inv-table tbody tr { border-bottom: 1px solid var(--rule); }
+  .inv-table tbody tr:last-child { border-bottom: 2px solid var(--rule); }
+  .inv-table tbody tr:nth-child(even) { background: #fafafa; }
+  .inv-table td {
+    padding: 7px 10px;
+    vertical-align: top;
+  }
+  .inv-table td.right { text-align: right; }
+  .inv-table td.center { text-align: center; }
+  .inv-table td.desc { font-size: 9pt; color: var(--mid); }
+  .inv-table td .item-name { font-weight: 600; color: var(--ink); }
+  .inv-table td .item-sub { font-size: 8.5pt; color: var(--light); margin-top: 2px; }
+
+  /* ── Dues + Summary Grid ── */
+  .summary-wrap {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    border-top: 1px solid var(--rule);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .dues-block { padding: 14px 20px; }
+  .dues-title {
+    font-size: 8pt; text-transform: uppercase; letter-spacing: 1.5px;
+    font-weight: 700; color: var(--mid); margin-bottom: 10px;
+  }
+  .dues-line {
+    display: flex; justify-content: space-between;
+    font-size: 9.5pt; margin-bottom: 5px;
+    padding-bottom: 5px;
+  }
+  .dues-line.ruled { border-bottom: 1px dashed var(--rule); }
+  .dues-key { color: var(--mid); }
+  .dues-val { font-weight: 600; text-align: right; }
+  .dues-val.zero { color: var(--light); }
+  .dues-val.credit { color: #2a6e3a; }
+  .dues-val.debit  { color: #8b1a1a; }
+
+  .tax-block { padding: 14px 20px; }
+  .tax-table {
+    width: 100%; border-collapse: collapse; font-size: 9pt;
+  }
+  .tax-table th {
+    text-align: left; font-size: 7.5pt; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--light); font-weight: 700;
+    padding: 0 6px 5px; border-bottom: 1px solid var(--rule);
+  }
+  .tax-table th.right { text-align: right; }
+  .tax-table td {
+    padding: 5px 6px; color: var(--mid);
+    border-bottom: 1px solid #f0f0f4;
+    font-size: 9pt;
+  }
+  .tax-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  .tax-table tfoot td {
+    font-weight: 700; color: var(--ink);
+    border-top: 1.5px solid var(--rule); border-bottom: none;
+    padding-top: 7px;
+  }

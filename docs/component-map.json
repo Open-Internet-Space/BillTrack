@@ -1,0 +1,1889 @@
+{
+  "title": "BillTrack application modification map",
+  "intro": "Feature-to-file map for the fresh-install BillTrack repository. Private organisation values are edited in Admin and are not part of source. This guide describes code, not any daily installation.",
+  "inventory_roots": [
+    "frontend/src",
+    "estate_app",
+    "estate_project",
+    "scripts",
+    "templates"
+  ],
+  "components": [
+    {
+      "id": "interface",
+      "title": "Web application and navigation",
+      "purpose": "App.jsx coordinates sign-in, section loading, caching and modal saves. Screens and forms are imported blocks, not embedded in the entrypoint.",
+      "parent": null,
+      "files": [
+        {
+          "path": "frontend/src/App.jsx",
+          "symbols": [
+            "App"
+          ],
+          "role": "Application state, authentication checks, page loading/cache and save coordination; assembles screen/form blocks."
+        },
+        {
+          "path": "frontend/src/index.js",
+          "symbols": [
+            "root"
+          ],
+          "role": "Mount React and the crash boundary into the HTML root."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/workspace/workspace.test.jsx"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "shell",
+      "title": "Sidebar, menu, logo and credits",
+      "purpose": "Change sidebar menu entries/icons, project identity and the login-page credits here.",
+      "parent": "interface",
+      "files": [
+        {
+          "path": "frontend/src/shared/Branding.jsx",
+          "symbols": [
+            "ProjectIdentity",
+            "ProjectCredits"
+          ],
+          "role": "Project identity, website link and login credits text."
+        },
+        {
+          "path": "frontend/src/shared/NavIcon.jsx",
+          "symbols": [
+            "navIconPaths",
+            "NavIcon"
+          ],
+          "role": "SVG paths and rendering for navigation icons."
+        },
+        {
+          "path": "frontend/src/shared/Sidebar.jsx",
+          "symbols": [
+            "Sidebar",
+            "navItems"
+          ],
+          "role": "Menu labels/order, selected section, user name and logout button."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve page IDs and the bill-context reset when opening Bills from the menu."
+    },
+    {
+      "id": "shared-controls",
+      "title": "Shared controls, formatting and dialogs",
+      "purpose": "Pagination, filter helpers, refresh buttons, money/date formatting, badges and keyboard-accessible dialogs are reused across features.",
+      "parent": "interface",
+      "files": [
+        {
+          "path": "frontend/src/Filters.jsx",
+          "symbols": [
+            "matchesSearch",
+            "withinDates",
+            "FilterBar"
+          ],
+          "role": "Reusable filter row and search/date matching helpers."
+        },
+        {
+          "path": "frontend/src/Pagination.jsx",
+          "symbols": [
+            "usePagination",
+            "Pagination"
+          ],
+          "role": "Rows-per-page options, page controls and page clamping hook."
+        },
+        {
+          "path": "frontend/src/RefreshButton.jsx",
+          "symbols": [
+            "RefreshButton"
+          ],
+          "role": "Reusable refresh button and busy presentation."
+        },
+        {
+          "path": "frontend/src/shared/Badges.jsx",
+          "symbols": [
+            "StatusBadge",
+            "TypeBadge"
+          ],
+          "role": "Paid/unpaid/partial and allottee-type badge appearance."
+        },
+        {
+          "path": "frontend/src/shared/ModalOverlay.jsx",
+          "symbols": [
+            "ModalOverlay"
+          ],
+          "role": "Dialog frame, focus restoration, Escape behavior and save/session feedback."
+        },
+        {
+          "path": "frontend/src/shared/format.js",
+          "symbols": [
+            "formatCurrency",
+            "formatDate"
+          ],
+          "role": "Display-only currency and date formatting; not financial calculations."
+        }
+      ],
+      "tests": [
+        "frontend/src/Pagination.test.jsx",
+        "estate_app/tests/test_pagination.py",
+        "estate_app/tests/test_filters.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "styles",
+      "title": "Application styles and responsive layout",
+      "purpose": "branding.css loads styles in cascade order: base, workspace, identity, auth, reports and feedback. Open the relevant block rather than adding duplicate overrides.",
+      "parent": "interface",
+      "files": [
+        {
+          "path": "frontend/src/branding.css",
+          "symbols": [],
+          "role": "Ordered stylesheet entrypoint; keep import order stable."
+        },
+        {
+          "path": "frontend/src/styles/auth.css",
+          "symbols": [],
+          "role": "Login form styling, animations and authentication responsive rules."
+        },
+        {
+          "path": "frontend/src/styles/base.css",
+          "symbols": [],
+          "role": "Fonts/tokens, resets, common controls, tables and inputs."
+        },
+        {
+          "path": "frontend/src/styles/feedback.css",
+          "symbols": [],
+          "role": "Error contrast/dismissal and late login recovery-link overrides."
+        },
+        {
+          "path": "frontend/src/styles/identity.css",
+          "symbols": [],
+          "role": "Login layout, logo treatment, project identity and credits."
+        },
+        {
+          "path": "frontend/src/styles/reports.css",
+          "symbols": [],
+          "role": "Report filters, columns, preview tables and download controls."
+        },
+        {
+          "path": "frontend/src/styles/workspace.css",
+          "symbols": [],
+          "role": "App/sidebar/dashboard/dialog layout and their responsive rules."
+        },
+        {
+          "path": "estate_app/static/estate_app/cursor.css",
+          "symbols": [],
+          "role": "Shared screen-only cursor styling for the React app, admin, recovery and invoice pages; preserves native interaction cursors."
+        },
+        {
+          "path": "estate_app/static/estate_app/cursor.svg",
+          "symbols": [],
+          "role": "Transparent 28px white arrow with a black rounded outline; the CSS hotspot is near its tip at 3,3."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve import order and check desktop, small-screen and keyboard focus states."
+    },
+    {
+      "id": "brand-assets",
+      "title": "Source branding images",
+      "purpose": "Replace source images only when changing the approved brand assets. Rebuild React and collect static files after changing frontend assets.",
+      "parent": "interface",
+      "files": [
+        {
+          "path": "frontend/public/index.html",
+          "symbols": [],
+          "role": "Replace source images only when changing the approved brand assets. Rebuild React and collect static files after changing frontend assets."
+        },
+        {
+          "path": "frontend/public/static/billtrack-icon.png",
+          "symbols": [],
+          "role": "Replace source images only when changing the approved brand assets. Rebuild React and collect static files after changing frontend assets."
+        },
+        {
+          "path": "frontend/public/static/billtrack-logo.png",
+          "symbols": [],
+          "role": "Replace source images only when changing the approved brand assets. Rebuild React and collect static files after changing frontend assets."
+        }
+      ],
+      "tests": [],
+      "settings": "Printed letterhead/logo can be changed in Admin \u2192 System Settings without replacing application logos.",
+      "caution": "Application logos and printed invoice branding are separate."
+    },
+    {
+      "id": "authentication",
+      "title": "Sign-in and authenticator recovery",
+      "purpose": "Sign-in, personal recovery and explicit special superuser emergency recovery of any approved account.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/models/accounts.py",
+          "symbols": [
+            "UserProfile",
+            "PasswordResetAttempt"
+          ],
+          "role": "User role profile and persisted recovery-attempt counter fields."
+        },
+        {
+          "path": "estate_app/views/auth.py",
+          "symbols": [
+            "_valid_totp",
+            "_recovery_retry_after",
+            "totp_password_reset",
+            "login_view",
+            "logout_view",
+            "me_view"
+          ],
+          "role": "Sign-in endpoints, TOTP validation, recovery budget and password-reset view."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_totp_recovery.py",
+        "frontend/src/features/auth/auth.test.jsx"
+      ],
+      "settings": "TOTP_RESET_SECRET is the private all-account superuser emergency key. Never publish it. See SUPERUSER-EMERGENCY-TOTP.md.",
+      "caution": "Preserve per-account limits, CSRF, replay protection, approval and generic recovery errors."
+    },
+    {
+      "id": "login-screen",
+      "title": "BillTrack login screen",
+      "purpose": "Edit labels, branding arrangement, saved-sign-in retry and the authenticator recovery link in this component.",
+      "parent": "authentication",
+      "files": [
+        {
+          "path": "frontend/src/features/auth/LoginScreen.jsx",
+          "symbols": [
+            "LoginScreen"
+          ],
+          "role": "Edit labels, branding arrangement, saved-sign-in retry and the authenticator recovery link in this component."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep password autocomplete, accessible labels and persistent inline errors."
+    },
+    {
+      "id": "reset-screen",
+      "title": "Password reset page",
+      "purpose": "TOTP content uses the shared accounts/base.html layout; email signup and recovery use accounts/page.html.",
+      "parent": "authentication",
+      "files": [
+        {
+          "path": "estate_app/templates/admin/totp_password_reset.html",
+          "symbols": [],
+          "role": "TOTP recovery content for username/email; shared accounts/base.html controls layout."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Do not echo passwords or authenticator codes. Keep the CSRF token and back-to-sign-in link."
+    },
+    {
+      "id": "errors",
+      "title": "Notifications, errors and diagnostic references",
+      "purpose": "Shared API errors, persistent toasts, crash fallback and server error responses are coordinated here.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/error_handling.py",
+          "symbols": [
+            "reference",
+            "RequestReferenceMiddleware",
+            "SafeErrorFilter",
+            "SafeErrorFormatter",
+            "error_response",
+            "bad_request",
+            "permission_denied",
+            "page_not_found",
+            "server_error",
+            "csrf_failure"
+          ],
+          "role": "Shared API errors, persistent toasts, crash fallback and server error responses are coordinated here."
+        },
+        {
+          "path": "estate_app/templates/errors/error.html",
+          "symbols": [],
+          "role": "Shared API errors, persistent toasts, crash fallback and server error responses are coordinated here."
+        },
+        {
+          "path": "frontend/src/ErrorBoundary.jsx",
+          "symbols": [
+            "ErrorBoundary"
+          ],
+          "role": "Shared API errors, persistent toasts, crash fallback and server error responses are coordinated here."
+        },
+        {
+          "path": "frontend/src/shared/ToastNotification.jsx",
+          "symbols": [
+            "ToastNotification"
+          ],
+          "role": "Persistent error and temporary success notice markup and dismissal."
+        }
+      ],
+      "tests": [
+        "frontend/src/api.test.js",
+        "frontend/src/ErrorBoundary.test.jsx",
+        "estate_app/tests/test_errors.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Errors must not disappear on an old success timer. Uncertain saves must not automatically replay; logs must not expose credentials or request bodies."
+    },
+    {
+      "id": "dashboard",
+      "title": "Dashboard",
+      "purpose": "Change summary cards and overdue/upcoming lists in the screen; change their data/query behavior in the dashboard endpoint.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/views/dashboard.py",
+          "symbols": [
+            "dashboard_stats"
+          ],
+          "role": "Dashboard totals, aggregation and queryset performance."
+        },
+        {
+          "path": "frontend/src/features/dashboard/Dashboard.jsx",
+          "symbols": [
+            "Dashboard"
+          ],
+          "role": "Dashboard cards, collection summary and overdue/upcoming lists."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/dashboard/dashboard.test.jsx",
+        "estate_app/tests/test_bill_performance.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve full-data totals, receipt eligibility and navigation to the selected bill."
+    },
+    {
+      "id": "allottees",
+      "title": "Allottees list and billing history",
+      "purpose": "List columns, search/sort and Raise Bill shortcut are in Allottees; model annotations and the API control last billed month.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/models/allottees.py",
+          "symbols": [
+            "Tenant"
+          ],
+          "role": "Stored allottee parameters, last-billed annotation and penalty configuration lookup."
+        },
+        {
+          "path": "estate_app/views/tenants.py",
+          "symbols": [
+            "TenantViewSet"
+          ],
+          "role": "Allottee API queryset and annotations."
+        },
+        {
+          "path": "frontend/src/features/allottees/Allottees.jsx",
+          "symbols": [
+            "Allottees"
+          ],
+          "role": "Allottee list rows, filters, billed-month sorting and Raise Bill navigation."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/allottees/allottees.test.jsx",
+        "estate_app/tests/test_allottees.py"
+      ],
+      "settings": "Allottee records and their billing/penalty parameters are editable through the app/admin.",
+      "caution": "Tenant remains the internal model/API name. Preserve UUIDs, chronological sorting and never-billed ordering."
+    },
+    {
+      "id": "allottee-form",
+      "title": "Add/edit allottee form",
+      "purpose": "Edit the form fields, defaults and Not Provided controls here; server validation is in serializers and models.",
+      "parent": "allottees",
+      "files": [
+        {
+          "path": "estate_app/static/estate_app/tenant_not_provided.js",
+          "symbols": [],
+          "role": "Edit the form fields, defaults and Not Provided controls here; server validation is in serializers and models."
+        },
+        {
+          "path": "frontend/src/features/allottees/TenantForm.jsx",
+          "symbols": [
+            "TenantForm"
+          ],
+          "role": "Edit the form fields, defaults and Not Provided controls here; server validation is in serializers and models."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep user-entered values and the distinction between blank values and Not Provided flags."
+    },
+    {
+      "id": "billing",
+      "title": "Bills, balances and receipt dates",
+      "purpose": "Bills composes its filter/table blocks and owns selections, refresh, delete and authorized printing. Model methods own GST, penalty, previous dues and receipt deadlines.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/models/billing.py",
+          "symbols": [
+            "Bill",
+            "Bill.calculate_gst",
+            "Bill.total_amount",
+            "Bill.balance_due",
+            "Bill.previous_balance",
+            "Bill.penalty_for",
+            "Bill.receipt_status",
+            "Bill.save"
+          ],
+          "role": "Stored bill fields, invoice numbering, GST, dues, penalties, receipt deadlines and save behavior."
+        },
+        {
+          "path": "estate_app/views/bills.py",
+          "symbols": [
+            "bill_read_queryset",
+            "BillViewSet"
+          ],
+          "role": "Bill CRUD, read query optimization and single/bulk creation API."
+        },
+        {
+          "path": "frontend/src/features/bills/Bills.jsx",
+          "symbols": [
+            "Bills"
+          ],
+          "role": "Bills composes its filter/table blocks and owns selections, refresh, delete and authorized printing. Model methods own GST, penalty, previous dues and receipt deadlines."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/bills/bills.test.jsx",
+        "estate_app/tests/test_bill_balances.py",
+        "estate_app/tests/test_receipts.py",
+        "estate_app/tests/test_bill_performance.py"
+      ],
+      "settings": "Billing parameters and system GST/penalty settings are data, not template constants.",
+      "caution": "Keep calculations in Python. Receipt confirmation starts the existing five-day deadline; preserve money precision and historical invoice numbers."
+    },
+    {
+      "id": "bill-list-blocks",
+      "title": "Bill filters, columns and row actions",
+      "purpose": "Change search/filter controls in BillFilters and table headings/cells/action buttons in BillTable. State and data mutations stay in Bills.",
+      "parent": "billing",
+      "files": [
+        {
+          "path": "frontend/src/features/bills/BillFilters.jsx",
+          "symbols": [
+            "BillFilters"
+          ],
+          "role": "Change search/filter controls in BillFilters and table headings/cells/action buttons in BillTable. State and data mutations stay in Bills."
+        },
+        {
+          "path": "frontend/src/features/bills/BillTable.jsx",
+          "symbols": [
+            "BillTable"
+          ],
+          "role": "Change search/filter controls in BillFilters and table headings/cells/action buttons in BillTable. State and data mutations stay in Bills."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "bill-forms",
+      "title": "Raise, edit and confirm receipt forms",
+      "purpose": "BillForm handles single/bulk entry; BillEditForm edits amounts; BillDispatchForm handles receipt/dispatch details.",
+      "parent": "billing",
+      "files": [
+        {
+          "path": "frontend/src/features/bills/BillDispatchForm.jsx",
+          "symbols": [
+            "BillDispatchForm"
+          ],
+          "role": "BillForm handles single/bulk entry; BillEditForm edits amounts; BillDispatchForm handles receipt/dispatch details."
+        },
+        {
+          "path": "frontend/src/features/bills/BillEditForm.jsx",
+          "symbols": [
+            "BillEditForm"
+          ],
+          "role": "BillForm handles single/bulk entry; BillEditForm edits amounts; BillDispatchForm handles receipt/dispatch details."
+        },
+        {
+          "path": "frontend/src/features/bills/BillForm.jsx",
+          "symbols": [
+            "BillForm"
+          ],
+          "role": "BillForm handles single/bulk entry; BillEditForm edits amounts; BillDispatchForm handles receipt/dispatch details."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Do not silently confirm receipt or change financial calculations in a form."
+    },
+    {
+      "id": "payments",
+      "title": "Payments register and allocation",
+      "purpose": "The register displays/filter payments; the model and viewset update balances and enforce delete permissions.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/models/payments.py",
+          "symbols": [
+            "Payment"
+          ],
+          "role": "Stored principal/penalty payments and balance/status updates on save."
+        },
+        {
+          "path": "estate_app/views/payments.py",
+          "symbols": [
+            "PaymentViewSet"
+          ],
+          "role": "Payment API and role-based deletion rule."
+        },
+        {
+          "path": "frontend/src/features/payments/Payments.jsx",
+          "symbols": [
+            "Payments"
+          ],
+          "role": "The register displays/filter payments; the model and viewset update balances and enforce delete permissions."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/payments/payments.test.jsx",
+        "frontend/src/features/workspace/workspace.test.jsx",
+        "estate_app/tests/test_bill_balances.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Principal and penalty are separate. Preserve recorded-by attribution and admin-only deletion."
+    },
+    {
+      "id": "payment-form",
+      "title": "Record payment form",
+      "purpose": "Edit payment entry fields, date/receipt controls and the invoice-only allocation guidance here.",
+      "parent": "payments",
+      "files": [
+        {
+          "path": "frontend/src/features/payments/PaymentForm.jsx",
+          "symbols": [
+            "PaymentForm"
+          ],
+          "role": "Edit payment entry fields, date/receipt controls and the invoice-only allocation guidance here."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "A payment applies to the selected invoice, not automatically to previous dues. Keep repeat-submit protection in App."
+    },
+    {
+      "id": "adjustments",
+      "title": "Payment adjustments and split details",
+      "purpose": "PaymentAdjustments groups bills and filters entries; AdjustmentBill displays split-payment rows and original split numbers.",
+      "parent": "payments",
+      "files": [
+        {
+          "path": "frontend/src/features/payments/AdjustmentBill.jsx",
+          "symbols": [
+            "AdjustmentBill"
+          ],
+          "role": "PaymentAdjustments groups bills and filters entries; AdjustmentBill displays split-payment rows and original split numbers."
+        },
+        {
+          "path": "frontend/src/features/payments/PaymentAdjustments.jsx",
+          "symbols": [
+            "PaymentAdjustments"
+          ],
+          "role": "PaymentAdjustments groups bills and filters entries; AdjustmentBill displays split-payment rows and original split numbers."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Filtered rows do not change full bill totals."
+    },
+    {
+      "id": "penalties",
+      "title": "Penalties and expanded bills",
+      "purpose": "PenaltyPage controls the period and allottee list; PenaltyBills renders filtered details. The Bill model owns the underlying calculation.",
+      "parent": null,
+      "files": [
+        {
+          "path": "frontend/src/features/penalties/PenaltyBills.jsx",
+          "symbols": [
+            "PenaltyBills"
+          ],
+          "role": "PenaltyPage controls the period and allottee list; PenaltyBills renders filtered details. The Bill model owns the underlying calculation."
+        },
+        {
+          "path": "frontend/src/features/penalties/PenaltyPage.jsx",
+          "symbols": [
+            "PenaltyPage"
+          ],
+          "role": "PenaltyPage controls the period and allottee list; PenaltyBills renders filtered details. The Bill model owns the underlying calculation."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/penalties/penalties.test.jsx",
+        "estate_app/tests/test_bill_balances.py"
+      ],
+      "settings": "System Settings and allottee overrides control penalty rates/types/frequency.",
+      "caution": "Keep visible filtered totals distinct from the full balance and preserve receipt/overdue semantics."
+    },
+    {
+      "id": "reports",
+      "title": "Report preview and exports",
+      "purpose": "React controls filters/preview/columns; reports.py builds historical rows and signed export snapshots; report_exports.py writes DOCX/XLSX.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/templates/report.html",
+          "symbols": [],
+          "role": "Printable/PDF report table and page layout."
+        },
+        {
+          "path": "estate_app/templatetags/__init__.py",
+          "symbols": [],
+          "role": "React controls filters/preview/columns; reports.py builds historical rows and signed export snapshots; report_exports.py writes DOCX/XLSX."
+        },
+        {
+          "path": "estate_app/templatetags/report_tags.py",
+          "symbols": [
+            "report_value"
+          ],
+          "role": "React controls filters/preview/columns; reports.py builds historical rows and signed export snapshots; report_exports.py writes DOCX/XLSX."
+        },
+        {
+          "path": "estate_app/views/report_exports.py",
+          "symbols": [
+            "table_rows",
+            "workbook_bytes",
+            "document_bytes"
+          ],
+          "role": "DOCX and spreadsheet file layout and cell/row formatting."
+        },
+        {
+          "path": "estate_app/views/reports.py",
+          "symbols": [
+            "ReportFilters",
+            "bill_position",
+            "build_report",
+            "export_report",
+            "reports"
+          ],
+          "role": "Report filter validation, historical row construction, signed snapshots and HTTP export responses."
+        },
+        {
+          "path": "frontend/src/features/reports/Reports.jsx",
+          "symbols": [
+            "REPORTS",
+            "money",
+            "localToday",
+            "Reports"
+          ],
+          "role": "Report selection, filters, reviewed preview, columns and download actions."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/reports/Reports.test.jsx",
+        "estate_app/tests/test_reports.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Historical reports reconstruct current records; preserve snapshot validation, cutoff semantics, matching export rows and money precision."
+    },
+    {
+      "id": "invoices",
+      "title": "Invoice rendering chain",
+      "purpose": "Screen/admin selection \u2192 selection helpers \u2192 invoice context/branding \u2192 single or bulk template \u2192 common wrapper/body includes \u2192 HTML or WeasyPrint PDF.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/templates/bulk_invoice.html",
+          "symbols": [],
+          "role": "Bulk selection entrypoint, grouping loop and bulk-only style block."
+        },
+        {
+          "path": "estate_app/templates/invoice_format2.html",
+          "symbols": [],
+          "role": "Single-month document entrypoint and title."
+        },
+        {
+          "path": "estate_app/views/invoices/__init__.py",
+          "symbols": [],
+          "role": "Screen/admin selection \u2192 selection helpers \u2192 invoice context/branding \u2192 single or bulk template \u2192 common wrapper/body includes \u2192 HTML or WeasyPrint PDF."
+        },
+        {
+          "path": "estate_app/views/invoices/http.py",
+          "symbols": [
+            "authenticated_invoice",
+            "invoice_view",
+            "bulk_invoice_view"
+          ],
+          "role": "Authenticated HTML/PDF endpoints and WeasyPrint response generation."
+        },
+        {
+          "path": "estate_app/views/invoices/selection.py",
+          "symbols": [
+            "selected_bills_from_ids",
+            "selected_invoice_contexts"
+          ],
+          "role": "Selected-bill ordering and grouping into individual or consolidated invoices."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_invoice_selection.py",
+        "estate_app/tests/test_invoice_settings.py",
+        "estate_app/tests/test_production.py"
+      ],
+      "settings": "Before editing templates, check invoice branding/text in Admin \u2192 System Settings.",
+      "caution": "Single month uses Format 2; multiple months for one allottee use consolidated charges. Mixed selections group by allottee. Preserve authentication and printed wording."
+    },
+    {
+      "id": "invoice-data",
+      "title": "Invoice context, amounts and words",
+      "purpose": "These modules supply template variables, amount-to-words, rounding and embedded letterhead images. They do not own the HTML layout.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/views/invoices/branding.py",
+          "symbols": [
+            "invoice_logo_data_uri",
+            "invoice_branding_context"
+          ],
+          "role": "System-settings context, reference placeholder and embedded logo data."
+        },
+        {
+          "path": "estate_app/views/invoices/context.py",
+          "symbols": [
+            "invoice_context",
+            "consolidated_invoice_context"
+          ],
+          "role": "Prepare single/consolidated template values, dues and period totals."
+        },
+        {
+          "path": "estate_app/views/invoices/formatting.py",
+          "symbols": [
+            "amount_to_words",
+            "format_money",
+            "round_rupees"
+          ],
+          "role": "Invoice amount-in-words, money formatting and rupee rounding."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Change data preparation here and calculations in models; do not calculate money in templates."
+    },
+    {
+      "id": "invoice-wrapper",
+      "title": "Document wrapper, print buttons and note editing",
+      "purpose": "The base template loads style blocks, toolbar, content and print-only note script. The original entrypoint filenames remain stable.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/base.html",
+          "symbols": [],
+          "role": "Common document head, ordered style includes, toolbar, content and script blocks."
+        },
+        {
+          "path": "estate_app/templates/invoices/print_script.html",
+          "symbols": [],
+          "role": "Temporary print-only note editing; does not save system settings."
+        },
+        {
+          "path": "estate_app/templates/invoices/toolbar.html",
+          "symbols": [],
+          "role": "Close, Edit Note and Print / Save PDF buttons."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Edit Note affects only the current print document. PDF styles stay embedded through template includes so no browser/static fetch is required."
+    },
+    {
+      "id": "invoice-styles",
+      "title": "Invoice type, spacing, tables and page fitting",
+      "purpose": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/styles/bulk.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        },
+        {
+          "path": "estate_app/templates/invoices/styles/footer.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        },
+        {
+          "path": "estate_app/templates/invoices/styles/foundation.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        },
+        {
+          "path": "estate_app/templates/invoices/styles/header.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        },
+        {
+          "path": "estate_app/templates/invoices/styles/print.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        },
+        {
+          "path": "estate_app/templates/invoices/styles/tables.css",
+          "symbols": [],
+          "role": "Style blocks are included in original order. Bulk-only page-break rules are separate from common print rules."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Check both browser and PDF output. Do not alter page breaks, scale, margins or fonts without comparing every invoice layout."
+    },
+    {
+      "id": "invoice-letterhead",
+      "title": "Letterhead and institute details",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/individual/letterhead.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-metadata",
+      "title": "Reference, recipient and invoice details",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/consolidated/metadata.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        },
+        {
+          "path": "estate_app/templates/invoices/individual/metadata.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-charges",
+      "title": "Charges tables",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/consolidated/charges.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        },
+        {
+          "path": "estate_app/templates/invoices/individual/charges.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-dues",
+      "title": "Previous dues, GST breakdown and payments",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/consolidated/dues.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        },
+        {
+          "path": "estate_app/templates/invoices/individual/dues.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-totals",
+      "title": "Total payable and amount in words",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/individual/totals.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-note",
+      "title": "Printed invoice note",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/individual/note.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-bank",
+      "title": "Bank details and remarks",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/individual/bank_remarks.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-signature",
+      "title": "Signature and copy-to recipients",
+      "purpose": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/invoices/individual/signature.html",
+          "symbols": [],
+          "role": "Edit this section through its included block. Where both formats share a block it appears once; distinct variants are listed separately."
+        }
+      ],
+      "tests": [],
+      "settings": "Use System Settings for editable wording, bank details, institute details and signing authority before changing source.",
+      "caution": "Preserve flat context variables and surrounding include scopes; compare individual and consolidated output."
+    },
+    {
+      "id": "invoice-adapters",
+      "title": "Single and consolidated body composition",
+      "purpose": "These small adapters assemble the body blocks and preserve existing context aliases for single/bulk rendering.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/templates/partials/consolidated_bulk_invoice.html",
+          "symbols": [],
+          "role": "These small adapters assemble the body blocks and preserve existing context aliases for single/bulk rendering."
+        },
+        {
+          "path": "estate_app/templates/partials/individual_invoice.html",
+          "symbols": [],
+          "role": "These small adapters assemble the body blocks and preserve existing context aliases for single/bulk rendering."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "legacy-pdf",
+      "title": "Legacy PDF helper \u2014 not used by current invoice routes",
+      "purpose": "pdf_utils contains a separate ReportLab helper. Current routes use the HTML templates and WeasyPrint; editing this helper will not change those invoices.",
+      "parent": "invoices",
+      "files": [
+        {
+          "path": "estate_app/pdf_utils.py",
+          "symbols": [
+            "safe_float",
+            "generate_invoice_pdf"
+          ],
+          "role": "pdf_utils contains a separate ReportLab helper. Current routes use the HTML templates and WeasyPrint; editing this helper will not change those invoices."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Retained for compatibility, not redirected or removed during this refactor."
+    },
+    {
+      "id": "admin",
+      "title": "Django administration",
+      "purpose": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/admin/__init__.py",
+          "symbols": [],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "estate_app/admin/common.py",
+          "symbols": [
+            "money",
+            "delete_link",
+            "ReceiptStatusFilter"
+          ],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "estate_app/admin_pagination.py",
+          "symbols": [
+            "PageSizeChangeListMixin",
+            "PaginationAdminMixin"
+          ],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/index.html",
+          "symbols": [],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "estate_app/templates/admin/login.html",
+          "symbols": [],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "estate_app/templates/admin/paginated_change_list.html",
+          "symbols": [],
+          "role": "The package initializer loads domain registrations once and sets admin branding. Common helpers and pagination are shared."
+        },
+        {
+          "path": "templates/admin/base_site.html",
+          "symbols": [],
+          "role": "Extends Django admin styling with the shared BillTrack cursor; preserves built-in admin content."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_pagination.py",
+        "estate_app/tests/test_data_transfer.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve Django admin permissions, CSRF and exactly-once registration."
+    },
+    {
+      "id": "admin-accounts",
+      "title": "Users, groups and API tokens",
+      "purpose": "Change domain-specific admin fields, readonly displays, filters and actions in this module.",
+      "parent": "admin",
+      "files": [
+        {
+          "path": "estate_app/admin/accounts.py",
+          "symbols": [
+            "UserProfileInline",
+            "UserAdmin",
+            "GroupAdmin",
+            "TokenAdmin"
+          ],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        }
+      ],
+      "tests": [],
+      "settings": "Edit ordinary values through the admin UI; edit this module only to change its behavior/layout.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "admin-allottees",
+      "title": "Allottee administration",
+      "purpose": "Change domain-specific admin fields, readonly displays, filters and actions in this module.",
+      "parent": "admin",
+      "files": [
+        {
+          "path": "estate_app/admin/allottees.py",
+          "symbols": [
+            "TenantAdmin"
+          ],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        }
+      ],
+      "tests": [],
+      "settings": "Edit ordinary values through the admin UI; edit this module only to change its behavior/layout.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "admin-settings",
+      "title": "System Settings administration",
+      "purpose": "Change domain-specific admin fields, readonly displays, filters and actions in this module.",
+      "parent": "admin",
+      "files": [
+        {
+          "path": "estate_app/admin/settings.py",
+          "symbols": [
+            "SystemSettingsAdmin"
+          ],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        }
+      ],
+      "tests": [],
+      "settings": "Edit ordinary values through the admin UI; edit this module only to change its behavior/layout.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "admin-billing",
+      "title": "Bill administration and bulk actions",
+      "purpose": "Change domain-specific admin fields, readonly displays, filters and actions in this module.",
+      "parent": "admin",
+      "files": [
+        {
+          "path": "estate_app/admin/billing.py",
+          "symbols": [
+            "PaymentInline",
+            "BillAdminForm",
+            "BillAdmin"
+          ],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/bill/bulk_add.html",
+          "symbols": [],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/bill/bulk_print.html",
+          "symbols": [],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/bill/change_list.html",
+          "symbols": [],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        }
+      ],
+      "tests": [],
+      "settings": "Edit ordinary values through the admin UI; edit this module only to change its behavior/layout.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "admin-payments",
+      "title": "Payment administration",
+      "purpose": "Change domain-specific admin fields, readonly displays, filters and actions in this module.",
+      "parent": "admin",
+      "files": [
+        {
+          "path": "estate_app/admin/payments.py",
+          "symbols": [
+            "PaymentAdmin"
+          ],
+          "role": "Change domain-specific admin fields, readonly displays, filters and actions in this module."
+        }
+      ],
+      "tests": [],
+      "settings": "Edit ordinary values through the admin UI; edit this module only to change its behavior/layout.",
+      "caution": "Keep existing behavior and run the related tests."
+    },
+    {
+      "id": "data-transfer",
+      "title": "Admin export/import and safety backups",
+      "purpose": "Serialization validates portable JSON, restoration applies merge/replace, and views/forms enforce access and expose safety downloads.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/data_transfer/__init__.py",
+          "symbols": [],
+          "role": "Serialization validates portable JSON, restoration applies merge/replace, and views/forms enforce access and expose safety downloads."
+        },
+        {
+          "path": "estate_app/data_transfer/restoration.py",
+          "symbols": [
+            "restore_data"
+          ],
+          "role": "Merge/replace persistence, original financial values and uploaded-logo cleanup."
+        },
+        {
+          "path": "estate_app/data_transfer/serialization.py",
+          "symbols": [
+            "export_data",
+            "export_bytes",
+            "validate_data"
+          ],
+          "role": "Export JSON schema, limits, identity mapping and incoming data/logo validation."
+        },
+        {
+          "path": "estate_app/data_transfer/views.py",
+          "symbols": [
+            "ImportForm",
+            "check_superuser",
+            "export_view",
+            "transfer_view",
+            "backup_view"
+          ],
+          "role": "Import form, authorization, confirmation, transaction and private safety-download views."
+        },
+        {
+          "path": "estate_app/templates/admin/data_transfer.html",
+          "symbols": [],
+          "role": "Serialization validates portable JSON, restoration applies merge/replace, and views/forms enforce access and expose safety downloads."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_data_transfer.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve version/size validation, superuser authorization, confirmation, transaction rollback, UUID merge identity and private safety backups."
+    },
+    {
+      "id": "api",
+      "title": "API routes and validation",
+      "purpose": "Routers connect screens to authenticated endpoints. Serializers control writable fields and validation; api.js centralizes request/download/error behavior.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/serializers.py",
+          "symbols": [
+            "UserSerializer",
+            "TenantSerializer",
+            "PaymentSerializer",
+            "BillSerializer",
+            "BillListSerializer"
+          ],
+          "role": "API fields, readonly/writable boundaries and incoming business validation."
+        },
+        {
+          "path": "estate_app/urls.py",
+          "symbols": [],
+          "role": "REST routers, authentication/report paths and invoice endpoint URLs."
+        },
+        {
+          "path": "estate_app/views/__init__.py",
+          "symbols": [],
+          "role": "Routers connect screens to authenticated endpoints. Serializers control writable fields and validation; api.js centralizes request/download/error behavior."
+        },
+        {
+          "path": "frontend/src/api.js",
+          "symbols": [
+            "API_URL",
+            "formatError",
+            "API"
+          ],
+          "role": "Authenticated requests, timeout, response/error handling, upload/download and print fetching."
+        }
+      ],
+      "tests": [
+        "frontend/src/api.test.js",
+        "estate_app/tests/test_filters.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Preserve existing URL paths, response shapes, permission rules and compatibility imports."
+    },
+    {
+      "id": "model-exports",
+      "title": "Model exports and shared system settings",
+      "purpose": "models/__init__.py preserves imports and historical migration validator paths. The settings model stores invoice wording and GST/penalty defaults.",
+      "parent": "api",
+      "files": [
+        {
+          "path": "estate_app/models/__init__.py",
+          "symbols": [],
+          "role": "models/__init__.py preserves imports and historical migration validator paths. The settings model stores invoice wording and GST/penalty defaults."
+        },
+        {
+          "path": "estate_app/models/settings.py",
+          "symbols": [
+            "validate_invoice_logo_size",
+            "SystemSettings"
+          ],
+          "role": "models/__init__.py preserves imports and historical migration validator paths. The settings model stores invoice wording and GST/penalty defaults."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Moving modules must not create a schema migration or change model/table identities."
+    },
+    {
+      "id": "operations",
+      "title": "Configuration and runtime entrypoints",
+      "purpose": "Configure this installation and record its own private maintenance/backup procedures.",
+      "parent": null,
+      "files": [
+        {
+          "path": ".env.example",
+          "symbols": [],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "estate_app/__init__.py",
+          "symbols": [],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "estate_app/apps.py",
+          "symbols": [
+            "EstateAppConfig"
+          ],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "estate_project/__init__.py",
+          "symbols": [],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "estate_project/settings.py",
+          "symbols": [],
+          "role": "Environment validation, middleware, database/static paths, authentication and diagnostic configuration."
+        },
+        {
+          "path": "estate_project/urls.py",
+          "symbols": [],
+          "role": "Admin/data-transfer/recovery/root-page paths and production error handlers."
+        },
+        {
+          "path": "estate_project/wsgi.py",
+          "symbols": [],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "manage.py",
+          "symbols": [
+            "main"
+          ],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        },
+        {
+          "path": "scripts/serve.py",
+          "symbols": [
+            "listen_addresses"
+          ],
+          "role": "Native Waitress entrypoint used by the Windows production task; separately verifies LAN/Tailscale listeners and writes logs/server.log."
+        },
+        {
+          "path": "start_billtrack.bat",
+          "symbols": [],
+          "role": "Settings, URL handlers, WSGI, app registration and launch scripts control runtime configuration and serving."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_production.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Use a private .env, DEBUG=False and explicit hosts. The office PC uses the boot-enabled native Windows task; pause with Disable before End. See PRODUCTION-WINDOWS.md and DOCKER.md. Retained Docker recipes are legacy development servers; do not run Compose against live data. Preserve the live task/service during branch review."
+    },
+    {
+      "id": "network",
+      "title": "Office LAN, Tailscale and Windows task",
+      "purpose": "These helpers verify restricted firewall rules and create/manage the installation-specific production task.",
+      "parent": "operations",
+      "files": [
+        {
+          "path": "scripts/configure_network.ps1",
+          "symbols": [],
+          "role": "These helpers verify restricted firewall rules and create/manage the installation-specific production task."
+        }
+      ],
+      "tests": [
+        "scripts/test_production_recovery.py"
+      ],
+      "settings": "Private .env supplies actual adapter addresses, allowed hosts and trusted origins.",
+      "caution": "Do not copy machine-specific addresses/rule IDs blindly or create a second production listener."
+    },
+    {
+      "id": "backup",
+      "title": "Backup and application recovery",
+      "purpose": "Online SQLite backup and recovery helpers preserve private data. The retained snapshot manifest determines what an application rollback restores.",
+      "parent": "operations",
+      "files": [
+        {
+          "path": "backup.bat",
+          "symbols": [],
+          "role": "Online SQLite backup and recovery helpers preserve private data. The retained snapshot manifest determines what an application rollback restores."
+        },
+        {
+          "path": "scripts/backup.py",
+          "symbols": [
+            "check_destination",
+            "configure_backup",
+            "create_backup",
+            "main"
+          ],
+          "role": "Online SQLite backup and recovery helpers preserve private data. The retained snapshot manifest determines what an application rollback restores."
+        },
+        {
+          "path": "scripts/production_recovery.py",
+          "symbols": [
+            "verify",
+            "restore"
+          ],
+          "role": "Online SQLite backup and recovery helpers preserve private data. The retained snapshot manifest determines what an application rollback restores."
+        }
+      ],
+      "tests": [
+        "scripts/test_backup.py",
+        "scripts/test_production_recovery.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Application rollback and restoring an older database are different operations. Never overwrite newer daily records to undo a code change."
+    },
+    {
+      "id": "migrations",
+      "title": "Schema migrations and historical compatibility",
+      "purpose": "Migrations are an ordered history, not the place to change current business logic. The existing validator import remains available after module extraction.",
+      "parent": "operations",
+      "files": [
+        {
+          "path": "estate_app/migrations/0001_initial.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Fresh-install schema."
+        },
+        {
+          "path": "estate_app/migrations/__init__.py",
+          "symbols": [],
+          "role": "Migration package."
+        }
+      ],
+      "tests": [],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Fresh-install baseline; no old migration history or data transformations are included."
+    },
+    {
+      "id": "tests",
+      "title": "Automated test sources and isolated test data",
+      "purpose": "Backend tests are grouped under estate_app/tests; frontend tests sit beside features, with shared render helpers under test-support.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/tests/__init__.py",
+          "symbols": [],
+          "role": "Backend tests are grouped under estate_app/tests; frontend tests sit beside features, with shared render helpers under test-support."
+        },
+        {
+          "path": "frontend/src/test-support/app.jsx",
+          "symbols": [
+            "sampleTenant",
+            "sampleBill",
+            "fillInput",
+            "choose",
+            "signedInApp"
+          ],
+          "role": "Shared isolated React render fixtures, input helpers and cleanup."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_allottees.py",
+        "estate_app/tests/test_bill_balances.py",
+        "estate_app/tests/test_bill_performance.py",
+        "estate_app/tests/test_data_transfer.py",
+        "estate_app/tests/test_errors.py",
+        "estate_app/tests/test_filters.py",
+        "estate_app/tests/test_invoice_selection.py",
+        "estate_app/tests/test_invoice_settings.py",
+        "estate_app/tests/test_pagination.py",
+        "estate_app/tests/test_production.py",
+        "estate_app/tests/test_receipts.py",
+        "estate_app/tests/test_reports.py",
+        "estate_app/tests/test_totp_recovery.py",
+        "frontend/src/ErrorBoundary.test.jsx",
+        "frontend/src/Pagination.test.jsx",
+        "frontend/src/api.test.js",
+        "frontend/src/features/allottees/allottees.test.jsx",
+        "frontend/src/features/auth/auth.test.jsx",
+        "frontend/src/features/bills/bills.test.jsx",
+        "frontend/src/features/dashboard/dashboard.test.jsx",
+        "frontend/src/features/payments/payments.test.jsx",
+        "frontend/src/features/penalties/penalties.test.jsx",
+        "frontend/src/features/reports/Reports.test.jsx",
+        "frontend/src/features/workspace/workspace.test.jsx"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Run against isolated test databases; do not load sample data or reset a real password in the daily-work installation."
+    },
+    {
+      "id": "modification-guide",
+      "title": "Component registry and generated guides",
+      "purpose": "Edit component-map.json, then run the standard-library generator. Check mode validates file/symbol references, component hierarchy, inventory coverage and generated outputs.",
+      "parent": null,
+      "files": [
+        {
+          "path": "docs/component-map.json",
+          "symbols": [],
+          "role": "Single maintained component hierarchy, file roles, symbols, cautions and modification recipes."
+        },
+        {
+          "path": "scripts/build_component_map.py",
+          "symbols": [
+            "source_path",
+            "symbols_in",
+            "load_registry",
+            "tree_lines",
+            "render_markdown",
+            "render_html",
+            "generate"
+          ],
+          "role": "Registry validation and deterministic Markdown/HTML generation."
+        }
+      ],
+      "tests": [
+        "scripts/test_component_map.py"
+      ],
+      "settings": "No administrator setting; edit the indicated source.",
+      "caution": "Registry and maintained guides belong in Git. Generated verification documents, screenshots, databases and secrets do not."
+    },
+    {
+      "id": "email-reminders",
+      "title": "Email reminders: preview, SMTP and daily task",
+      "parent": "admin",
+      "purpose": "Receipt-based calendar milestones, one combined email per allottee, duplicate claims, safe delivery history and manual-first automation.",
+      "files": [
+        {
+          "path": "estate_app/models/reminders.py",
+          "symbols": [
+            "ReminderSettings",
+            "ReminderDelivery"
+          ],
+          "role": "Installation-local automatic switch and immutable delivery/milestone history."
+        },
+        {
+          "path": "estate_app/reminders/__init__.py",
+          "symbols": [],
+          "role": "Reminder feature package."
+        },
+        {
+          "path": "estate_app/reminders/service.py",
+          "symbols": [
+            "cutoff_date",
+            "milestone",
+            "preview",
+            "send_reminders",
+            "send_test",
+            "smtp_fingerprint"
+          ],
+          "role": "Shared read-only selection, current-balance recheck, atomic daily claims and conservative SMTP results."
+        },
+        {
+          "path": "estate_app/reminders/admin.py",
+          "symbols": [
+            "ReminderSettingsAdmin",
+            "ReminderDeliveryAdmin",
+            "reminder_view"
+          ],
+          "role": "Superuser-only preview, selected sending, configuration testing and uncertain-delivery review."
+        },
+        {
+          "path": "estate_app/management/__init__.py",
+          "symbols": [],
+          "role": "Django management package."
+        },
+        {
+          "path": "estate_app/management/commands/__init__.py",
+          "symbols": [],
+          "role": "Django command discovery."
+        },
+        {
+          "path": "estate_app/management/commands/send_bill_reminders.py",
+          "symbols": [
+            "Command"
+          ],
+          "role": "Preview by default; explicit --send or guarded --automatic."
+        },
+        {
+          "path": "templates/admin/email_reminders.html",
+          "symbols": [],
+          "role": "Admin controls and delivery history."
+        },
+        {
+          "path": "estate_app/templates/reminders/email.txt",
+          "symbols": [],
+          "role": "Combined plain-text reminder; no attachments or private-site links."
+        },
+        {
+          "path": "scripts/install_reminder_task.ps1",
+          "symbols": [],
+          "role": "Separate limited-user daily 09:30 Windows task; preserves the production task."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_reminders.py"
+      ],
+      "settings": "Private SMTP settings in .env. Automatic sending defaults off and requires a successful setup test.",
+      "caution": "Never send test reminders to real allottees. Do not retry uncertain SMTP submissions without checking provider activity. Full backups contain mail history; business JSON exports exclude it."
+    },
+    {
+      "id": "admin-maintenance",
+      "title": "Admin maintenance and modification guides",
+      "parent": "admin",
+      "purpose": "Superuser-only, GET-only rollback snapshot metadata and searchable feature-to-file instructions. No script execution, source editing or archive download.",
+      "files": [
+        {
+          "path": "estate_app/maintenance.py",
+          "symbols": [
+            "PARTS",
+            "local_file",
+            "rollback_catalog",
+            "rollback_view",
+            "MapSearch",
+            "modification_view"
+          ],
+          "role": "Approved local snapshot discovery, restricted metadata fields, permissions and registry search."
+        },
+        {
+          "path": "templates/admin/rollbacks.html",
+          "symbols": [],
+          "role": "Recovery cautions, backup locations, expected versions and local instruction paths."
+        },
+        {
+          "path": "templates/admin/modification_guide.html",
+          "symbols": [],
+          "role": "Search/browse component purposes, source paths, named blocks and verification guidance."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_maintenance.py"
+      ],
+      "settings": "No runtime setting or database migration; metadata comes from approved local backups and docs/component-map.json.",
+      "caution": "A feature-named snapshot can restore a whole earlier version and remove later features. Never expose .env/database/archive contents or execute recovery scripts through the web page."
+    },
+    {
+      "id": "email-accounts",
+      "title": "Signup approval and email OTP recovery",
+      "purpose": "Verified signup, superuser approval, legacy email enrollment, email sign-in and password recovery.",
+      "parent": "authentication",
+      "files": [
+        {
+          "path": "estate_app/account_security/__init__.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/service.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/forms.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/views.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/authentication.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/signals.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/models/account_security.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/templates/accounts/base.html",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/templates/accounts/page.html",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/templates/admin/account_approvals.html",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/management/commands/prepare_account_rollback.py",
+          "symbols": [],
+          "role": "Account forms, state, OTP/mail security, approval or safe rollback; edit alongside the account tests."
+        },
+        {
+          "path": "estate_app/account_security/totp.py",
+          "symbols": [],
+          "role": "Personal authenticator enrollment and one-use all-account recovery, independent of SMTP."
+        },
+        {
+          "path": "estate_app/templates/accounts/authenticator_setup.html",
+          "symbols": [],
+          "role": "Personal authenticator enrollment and one-use all-account recovery, independent of SMTP."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_email_accounts.py",
+        "estate_app/tests/test_account_authenticator.py"
+      ],
+      "settings": "ACCOUNT_EMAIL_ENABLED defaults false; current SMTP fingerprint must pass the existing admin mail test. See EMAIL-ACCOUNTS.md.",
+      "caution": "Never bypass approval, log OTPs, drop per-email limits or remove rollback quarantine. Recovery submission is asynchronous and can be interrupted by a restart."
+    },
+    {
+      "id": "emergency-recovery",
+      "title": "Admin QR setup and special superuser emergency TOTP",
+      "parent": "authentication",
+      "purpose": "Personal QR provisioning and superuser-only emergency QR reveal; emergency codes can recover any active approved account.",
+      "files": [
+        {
+          "path": "estate_app/account_security/qr.py",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        },
+        {
+          "path": "estate_app/account_security/emergency.py",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        },
+        {
+          "path": "estate_app/templates/admin/account_password_change.html",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        },
+        {
+          "path": "estate_app/templates/admin/account_user_password_change.html",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        },
+        {
+          "path": "estate_app/templates/admin/account_recovery_tools.html",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        },
+        {
+          "path": "estate_app/templates/admin/emergency_authenticator.html",
+          "symbols": [],
+          "role": "Local QR encoding, password-protected emergency provisioning or admin recovery tools."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_emergency_recovery.py"
+      ],
+      "settings": "TOTP_RESET_SECRET stays private; generated QR uses installed ReportLab without external services.",
+      "caution": "Never expose a secret on GET or to non-superusers. Keep password confirmation, CSRF, global attempts/replay protection and blocked-account checks."
+    },
+    {
+      "id": "private-configuration",
+      "title": "Private organisation profile and invoice readiness",
+      "purpose": "Local database/media configuration, neutral defaults and printing guard.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/views/invoices/branding.py",
+          "symbols": [
+            "invoice_logo_data_uri",
+            "invoice_configuration_error"
+          ],
+          "role": "Private logo read, generic fallback and configured-name guard."
+        },
+        {
+          "path": "estate_app/templates/invoice_setup_required.html",
+          "symbols": [],
+          "role": "Visible setup guidance before printing."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_private_configuration.py"
+      ],
+      "settings": "Use Admin System Settings. No organisation values are stored in .env or source.",
+      "caution": "Keep all actual organisation and bank/tax data in ignored SQLite/media and private backups."
+    }
+  ],
+  "recipes": [
+    {
+      "title": "Change the invoice logo, note or signing authority",
+      "components": [
+        "invoice-letterhead",
+        "invoice-note",
+        "invoice-signature",
+        "admin-settings"
+      ],
+      "steps": [
+        "First open Admin \u2192 System Settings: ordinary invoice branding and wording are editable data.",
+        "For layout changes, use the relevant body include and invoice style block.",
+        "Compare single-month, consolidated and mixed-allottee HTML/PDF output before publishing."
+      ]
+    },
+    {
+      "title": "Change invoice columns, amounts or page breaks",
+      "components": [
+        "invoice-charges",
+        "invoice-dues",
+        "invoice-totals",
+        "invoice-data",
+        "invoice-styles",
+        "billing"
+      ],
+      "steps": [
+        "For a visible column, edit the individual or consolidated charges include listed below.",
+        "For a supplied value, follow invoice context to the Bill model; keep calculations out of templates.",
+        "For page fitting, inspect common print styles and bulk-only breaks. Verify amounts, wording, page count and rendered output."
+      ]
+    },
+    {
+      "title": "Change a screen, form, menu or shared appearance",
+      "components": [
+        "interface",
+        "shell",
+        "styles",
+        "allottee-form",
+        "bill-forms",
+        "payment-form"
+      ],
+      "steps": [
+        "Find the screen below, then open its feature component and supporting form/table blocks.",
+        "Use shared components for reusable controls; App remains the composition/state coordinator.",
+        "Follow the listed API/serializer/model when changing validation or saved data. Run feature and shared workflow tests."
+      ]
+    },
+    {
+      "title": "Change password recovery or error messages",
+      "components": [
+        "authentication",
+        "reset-screen",
+        "errors",
+        "api"
+      ],
+      "steps": [
+        "Use LoginScreen or the reset template for appearance and labels.",
+        "Use auth.py and the recovery model for security behavior; preserve the account budget and CSRF protection.",
+        "Use shared API/server error handling for request failures; never add automatic write retries."
+      ]
+    },
+    {
+      "title": "Add or move a component",
+      "components": [
+        "modification-guide",
+        "tests"
+      ],
+      "steps": [
+        "Keep related UI, server behavior and tests grouped by feature. Preserve public routes and migration imports.",
+        "Add or update the registry entry, including files, named parts, parents, settings and related tests.",
+        "Run python scripts/build_component_map.py, then run it with --check. Both HTML and Markdown must be committed together."
+      ]
+    },
+    {
+      "title": "Change signup, account approval or email recovery",
+      "components": [
+        "authentication",
+        "email-accounts",
+        "reset-screen"
+      ],
+      "steps": [
+        "Edit the account_security module for OTP, approval or email identity behavior.",
+        "Edit the shared accounts templates for appearance; preserve CSRF, password hiding and generic recovery responses.",
+        "Run email account tests against a file-backed SQLite test database, including concurrent OTP and approval cases."
+      ]
+    }
+  ]
+}

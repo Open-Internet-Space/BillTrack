@@ -1,0 +1,12 @@
+  <!-- ── BANK + REMARKS ── -->
+  <div class="footer-grid">
+    <div class="bank-block">
+      <div class="footer-label">Bank Details</div>
+      <div class="bank-line">{{ invoice_settings.bank_details|linebreaksbr }}</div>
+    </div>
+    <div class="meta-divider"></div>
+    <div class="remarks-block">
+      <div class="footer-label">Remarks</div>
+      <div class="remarks-text">{{ invoice_settings.invoice_remarks|linebreaksbr }}</div>
+    </div>
+  </div>

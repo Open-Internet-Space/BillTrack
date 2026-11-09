@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Which code to change</h1>
+<p>Find a section, then follow its file paths and editing instructions. This is the existing modification map, available to superusers inside Admin. It does not edit or serve source files.</p>
+<p>Paths below are relative to the server installation <code>{{ root }}</code>. Edit in the checkout or on the server, test the change and deploy it; changing a browser page does not change source code.</p>
+<form method="get">{{ search_form.as_p }}<button type="submit">Find section</button> <a href="{% url 'admin-modification-guide' %}">Show all</a></form>
+{% if guide_error %}<p role="alert">{{ guide_error }}</p>{% else %}
+<p>{{ components|length }} matching component{{ components|length|pluralize }}.</p>
+{% for recipe in recipes %}
+<details class="module"><summary><strong>{{ recipe.title }}</strong></summary>
+<ol>{% for step in recipe.steps %}<li>{{ step }}</li>{% endfor %}</ol>
+<p>{% for component in recipe.components %}<a href="#{{ component }}">{{ component }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+</details>{% endfor %}
+{% for component in components %}
+<details class="module" id="{{ component.id }}" {% if query %}open{% endif %}>
+<summary><strong>{{ component.title }}</strong></summary>
+<p>{{ component.purpose }}</p>
+{% if component.parent %}<p>Part of: <code>{{ component.parent }}</code></p>{% endif %}
+<dl>{% for file in component.files %}
+<dt><code style="overflow-wrap:anywhere">{{ file.path }}</code></dt>
+<dd><p>{{ file.role }}</p>{% if file.symbols %}<p>Named code blocks: {% for symbol in file.symbols %}<code>{{ symbol }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}</dd>
+{% endfor %}</dl>
+<p><strong>Check settings first:</strong> {{ component.settings }}</p>
+<p><strong>Keep in mind:</strong> {{ component.caution }}</p>
+{% if component.tests %}<p><strong>Relevant checks:</strong></p><ul>{% for test in component.tests %}<li><code style="overflow-wrap:anywhere">{{ test }}</code></li>{% endfor %}</ul>{% endif %}
+</details>
+{% empty %}{% if not guide_error %}<p>No matching component. Try a feature name, file path or code-block name.</p>{% endif %}{% endfor %}
+{% endif %}
+<p>Maintain the source registry in <code>docs/component-map.json</code>. Regenerate and validate the standalone guides with <code>python scripts/build_component_map.py</code> and <code>python scripts/build_component_map.py --check</code>.</p>
+{% endblock %}

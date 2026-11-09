@@ -1,0 +1,9 @@
+# Security policy
+
+Report vulnerabilities privately to the repository owner, without credentials or customer data. No public internet deployment or full vulnerability audit is implied by source preparation.
+
+Production requires DEBUG=False and a private SECRET_KEY. Keep .env variants, SQLite/WAL files, media, logs, exports and backups out of source control. Organisation configuration is stored only in local SQLite/media. Backups contain bank/tax details, account secrets and recovery counters; filesystem permissions and private storage remain essential.
+
+Email recovery and payment reminders require tested SMTP and explicit enablement. Personal TOTP works without SMTP. The special superuser emergency key can recover any active approved account; reveal requires a superuser and fresh password. Never distribute it to ordinary users. Recoveries revoke tokens and invalidate old sessions; global/personal replay counters and attempt limits must survive restarts.
+
+Only synthetic credentials belong in tests. Before publication scan the staged tree and new history, inspect image metadata, and review releases/logs/artifacts separately. Public-distribution and dependency/security reviews are separate decisions. The original private installation/history are not imported or altered.

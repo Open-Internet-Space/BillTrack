@@ -1,0 +1,7 @@
+/* Persistent, readable failures beside the task that needs attention. */
+.error-message { margin: 14px 0; padding: 14px 16px; border: 1px solid #e06464; border-radius: 6px; background: #33181c; color: #ffb4b4; overflow-wrap: anywhere; }
+.error-message p { margin: 0 0 8px; }
+.error-dismiss, .login-panel button.error-dismiss, .login-panel button.error-dismiss:hover { width: auto; margin-left: 8px; padding: 4px 8px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; box-shadow: none; transform: none; }
+.error-dismiss:focus-visible { outline: 2px solid #f0a500; outline-offset: 3px; }
+.login-panel .login-recovery { display: inline-block; margin-top: 18px; color: #fbbf24; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.login-panel .login-recovery:focus-visible { outline: 2px solid #fbbf24; outline-offset: 4px; }

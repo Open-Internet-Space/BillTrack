@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}{% endblock %}</title>
+<link rel="stylesheet" href="{% static 'estate_app/cursor.css' %}" media="screen">
+<style>
+{% include "invoices/styles/foundation.css" %}
+{% include "invoices/styles/header.css" %}
+{% include "invoices/styles/tables.css" %}
+{% include "invoices/styles/footer.css" %}
+{% include "invoices/styles/print.css" %}
+{% block extra_styles %}{% endblock %}
+</style>
+</head>
+<body>
+{% include "invoices/toolbar.html" %}
+{% block content %}{% endblock %}
+{% include "invoices/print_script.html" %}
+</body>
+</html>

@@ -1,0 +1,14 @@
+{% extends "admin/change_list.html" %}
+{% block pagination %}
+<nav aria-label="Records pagination" class="paginator">
+  <span>Showing {{ cl.page_start }}-{{ cl.page_end }} of {{ cl.result_count }}</span>
+  <label for="admin-page-size">Rows per page</label>
+  <select id="admin-page-size" onchange="const url = new URL(window.location.href); url.searchParams.set('page_size', this.value); url.searchParams.delete('p'); url.searchParams.delete('all'); window.location.assign(url.href);">
+    {% for size in cl.page_size_choices %}<option value="{{ size }}"{% if size == cl.list_per_page %} selected{% endif %}>{{ size }}</option>{% endfor %}
+  </select>
+  {% if cl.previous_page_url %}<a href="{{ cl.previous_page_url }}">Prev</a>{% else %}<span aria-disabled="true">Prev</span>{% endif %}
+  <span>{{ cl.page_num }}/{{ cl.paginator.num_pages }}</span>
+  {% if cl.next_page_url %}<a href="{{ cl.next_page_url }}">Next</a>{% else %}<span aria-disabled="true">Next</span>{% endif %}
+</nav>
+{{ block.super }}
+{% endblock %}

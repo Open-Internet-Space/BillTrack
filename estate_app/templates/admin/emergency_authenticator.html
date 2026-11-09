@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h2>Special TOTP for superuser emergency recovery</h2>
+<p>This is separate from your personal authenticator. Its code can recover any active, approved BillTrack account, even one with a personal authenticator. It does not approve or enable blocked accounts.</p>
+<p><strong>Keep this key exclusively with trusted superusers.</strong> Possession grants emergency password-recovery authority over all accounts. QR codes are generated locally and never sent to a third-party service.</p>
+{% if error %}<p class="errornote" role="alert">{{ error }}</p>{% endif %}
+{% if qr_image %}
+  <p>Scan with your authenticator app. Save the entry as <strong>BillTrack: Superuser emergency (all accounts)</strong>.</p>
+  <img src="{{ qr_image }}" alt="QR code for the special superuser emergency TOTP" width="240" height="240" style="display:block;max-width:100%;height:auto;background:white">
+  <p>Manual setup key: <code>{{ secret }}</code> — Time based, SHA1, 6 digits, 30 seconds.</p>
+  <p>For recovery, select <strong>Superuser emergency TOTP</strong> on the authenticator recovery page. Each emergency code works once across all accounts; wait for a new code for another recovery.</p>
+{% else %}
+  <form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Reveal emergency QR code</button></form>
+{% endif %}
+<p><a href="{% url 'admin:password_change' %}">Back to my password page</a></p>
+{% endblock %}
