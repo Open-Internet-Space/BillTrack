@@ -1,0 +1,18 @@
+{% extends "admin/change_form.html" %}
+{% block field_sets %}
+  {% if has_change_permission or add and has_add_permission %}
+  <fieldset class="module placeholder-picker" aria-labelledby="placeholder-title">
+    <h2 id="placeholder-title">Insert placeholder</h2>
+    <p>Choose a field below. BillTrack fills it with the selected allottee and bill details when generating an email.</p>
+    <div class="placeholder-controls">
+      <div><label for="placeholder-target">Insert into</label><select id="placeholder-target"><option value="id_body">Body</option><option value="id_subject">Subject</option></select></div>
+      <div><label for="placeholder-choice">Placeholder</label><select id="placeholder-choice" aria-describedby="placeholder-description">
+        {% for key,label,description,multiline in email_placeholders %}<option value="{{ key }}" data-description="{{ description }}" data-multiline="{{ multiline|yesno:'true,false' }}">{{ label }} — {{ description }}</option>{% endfor %}
+      </select></div>
+      <button type="button" class="button" id="placeholder-insert">Insert placeholder</button>
+    </div>
+    <p id="placeholder-description"></p><p id="placeholder-status" role="status" aria-live="polite"></p>
+  </fieldset>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

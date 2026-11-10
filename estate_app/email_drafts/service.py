@@ -31,7 +31,7 @@ def generate(allottee_id,bill_ids,template):
                      f'Due date: {due}\nRemaining principal: INR {principal:.2f}\n'
                      f'Remaining penalty: INR {penalty:.2f}\nOutstanding: INR {principal+penalty:.2f}')
     now=timezone.now()
-    values={'allottee_name':allottee.name,'organisation_name':config.letterhead_name if config else '',
+    values={'allottee_name':allottee.name,'allotment_description':allottee.allotment_description,'organisation_name':config.letterhead_name if config else '',
             'signing_authority':config.signing_authority if config else '',
             'preparation_date':timezone.localtime(now).strftime('%d %b %Y'),
             'bill_details':'\n\n'.join(lines) or 'No bills selected.', 'outstanding_total':f'INR {total:.2f}'}

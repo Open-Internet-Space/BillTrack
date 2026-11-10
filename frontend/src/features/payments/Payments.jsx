@@ -9,13 +9,13 @@ export function Payments({ payments, refresh, refreshing }) {
   const [filters, setFilters] = useState({ tenant: "all", year: "all", month: "all", search: "", from: "", to: "" });
   const tenantOptions = useMemo(() => {
     const map = new Map();
-    paymentRows.forEach(p => map.set(String(p.bill_tenant), p.bill_tenant_name));
+    paymentRows.forEach(p => map.set(String(p.bill_tenant), (p.bill_tenant_display_name || p.bill_tenant_name)));
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [paymentRows]);
   const yearOptions = useMemo(() => [...new Set(paymentRows.map(p => p.bill_year))].filter(Boolean).sort((a, b) => b - a), [paymentRows]);
   const monthOptions = useMemo(() => [...new Set(paymentRows.map(p => p.bill_month))].filter(Boolean).sort((a, b) => a - b), [paymentRows]);
   const filteredRows = useMemo(() => paymentRows.filter(p =>
-    matchesSearch(filters.search, p.receipt_no, p.bill_invoice, p.bill_tenant_name)
+    matchesSearch(filters.search, p.receipt_no, p.bill_invoice, (p.bill_tenant_display_name || p.bill_tenant_name))
     && withinDates(p.payment_date, filters.from, filters.to) &&
     (filters.tenant === "all" || String(p.bill_tenant) === filters.tenant) &&
     (filters.year === "all" || String(p.bill_year) === filters.year) &&
@@ -71,7 +71,7 @@ export function Payments({ payments, refresh, refreshing }) {
               <tr key={p.id} className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{formatDate(p.payment_date)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", color: "#f0a500" }}>{p.bill_invoice}</td>
-                <td style={{ padding: "10px 14px" }}>{p.bill_tenant_name}</td>
+                <td style={{ padding: "10px 14px" }}>{(p.bill_tenant_display_name || p.bill_tenant_name)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{p.bill_period}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#22c55e", fontWeight: 700 }}>{formatCurrency(p.amount)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: p.penalty_paid > 0 ? "#ef4444" : "#8b949e" }}>{p.penalty_paid > 0 ? formatCurrency(p.penalty_paid) : "—"}</td>

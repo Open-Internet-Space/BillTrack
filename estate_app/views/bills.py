@@ -31,7 +31,7 @@ class BillViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['tenant', 'month', 'year', 'status', 'tenant__type']
-    search_fields = ['invoice_no', 'tenant__name']
+    search_fields = ['invoice_no', 'tenant__name', 'tenant__allotment_description']
     ordering_fields = ['year', 'month', 'due_date', 'status', 'created_at']
     ordering = ['-year', '-month']
 

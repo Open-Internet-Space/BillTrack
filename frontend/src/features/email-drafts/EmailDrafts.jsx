@@ -1,3 +1,4 @@
+import { allotteeLabel } from "../../shared/format.js";
 import { useEffect, useRef, useState } from "react";
 import API from "../../api";
 import "./email-drafts.css";
@@ -99,7 +100,7 @@ export function EmailDrafts({ context, tenants, onDirty, onBusy }) {
         <label htmlFor="draft-template">Saved template<select id="draft-template" className="inp" value={template} onChange={event => {
           setTemplate(event.target.value); if (draft) { setDirty(true); setNeedsGeneration(true); }
         }}><option value="">Choose template</option>{templates.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
-        <label htmlFor="draft-allottee">Fill details from allottee<select id="draft-allottee" className="inp" value={allottee} onChange={event => chooseAllottee(event.target.value)}><option value="">Choose allottee</option>{tenants.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+        <label htmlFor="draft-allottee">Fill details from allottee<select id="draft-allottee" className="inp" value={allottee} onChange={event => chooseAllottee(event.target.value)}><option value="">Choose allottee</option>{tenants.map(item => <option value={item.id} key={item.id}>{allotteeLabel(item)}</option>)}</select></label>
       </div>
       <button className="btn-ghost" onClick={() => { setError(""); setTemplateReload(value => value + 1); }}>Reload templates</button>
       {!templates.length && <p>No active templates loaded. Ask an administrator to configure templates, or reload after a connection problem.</p>}

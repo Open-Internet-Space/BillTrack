@@ -13,7 +13,7 @@ class TenantViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['type', 'active']
-    search_fields = ['name', 'contact']
+    search_fields = ['name', 'allotment_description', 'contact']
     ordering_fields = ['name', 'type', 'created_at']
     ordering = ['name']
 

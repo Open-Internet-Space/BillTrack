@@ -8,7 +8,7 @@ from .common import money
 @admin.register(Payment)
 class PaymentAdmin(PaginationAdminMixin, admin.ModelAdmin):
     list_display = ['payment_date', 'bill', 'amount_display']
-    search_fields = ['receipt_no', 'bill__invoice_no', 'bill__dispatch_ref_no', 'bill__tenant__name', 'notes']
+    search_fields = ['receipt_no', 'bill__invoice_no', 'bill__dispatch_ref_no', 'bill__tenant__name', 'bill__tenant__allotment_description', 'notes']
     list_filter = ['bill__tenant__type', ('bill__tenant', admin.RelatedOnlyFieldListFilter),
                    'bill__year', 'bill__month', 'bill__status']
     date_hierarchy = 'payment_date'

@@ -1,3 +1,4 @@
+import { allotteeLabel } from "../../shared/format.js";
 import { useState } from 'react';
 import Pagination, { usePagination } from '../../Pagination';
 import RefreshButton from '../../RefreshButton';
@@ -73,7 +74,7 @@ export default function Reports({ api, tenants, refresh }) {
           <label htmlFor="report-tenant">Vendor
             <select id="report-tenant" name="tenant" className="inp" value={filters.tenant} onChange={change}>
               <option value="">All vendors</option>
-              {tenants.map(tenant => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+              {tenants.map(tenant => <option key={tenant.id} value={tenant.id}>{allotteeLabel(tenant)}</option>)}
             </select>
           </label>
           <label htmlFor="report-type">Vendor type

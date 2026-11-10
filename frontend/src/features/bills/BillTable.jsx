@@ -38,7 +38,7 @@ export function BillTable({ allSelected, toggleAllBills, pageRows, selectedSet, 
                   />
                 </td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#f0a500" }}>{b.invoice_no || "[Pending]"}</td>
-                <td style={{ padding: "10px 14px" }}>{b.tenant_name}</td>
+                <td style={{ padding: "10px 14px" }}>{(b.tenant_display_name || b.tenant_name)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{b.month_name} {b.year}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{formatCurrency(b.total_amount)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#22c55e" }}>{formatCurrency(b.amount_paid)}</td>

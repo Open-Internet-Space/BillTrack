@@ -3,6 +3,7 @@ import { useState } from "react";
 export function TenantForm({ tenant, onSave, onClose }) {
   const [form, setForm] = useState({
     name: tenant?.name || "",
+    allotment_description: tenant?.allotment_description || "",
     type: tenant?.type || "",
     contact: tenant?.contact || "",
     contact_not_provided: tenant?.contact_not_provided || false,
@@ -37,6 +38,7 @@ export function TenantForm({ tenant, onSave, onClose }) {
       <h2 id="modal-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #21262d" }}>{tenant ? "Edit Allottee" : "Add Allottee"}</h2>
       <div style={{ display: "grid", gap: 14 }}>
         <div><label htmlFor="tenantform-name">Name</label><input id="tenantform-name" className="inp" value={form.name} onChange={e => set("name", e.target.value)} /></div>
+        <div><label htmlFor="tenantform-description">Allotment description (optional)</label><input id="tenantform-description" className="inp" maxLength={200} placeholder="e.g. Shop 12, Market Block" value={form.allotment_description} onChange={e => set("allotment_description", e.target.value)} /><p className="form-feedback">Shown beside the name to distinguish separate allotments.</p></div>
         <div><label htmlFor="tenantform-type">Type</label><input id="tenantform-type" className="inp" maxLength={50} value={form.type} onChange={e => set("type", e.target.value)} /></div>
         {optionalField("contact", "Contact", notProvided => <input id="tenant-contact" className="inp" disabled={notProvided} value={form.contact} onChange={e => set("contact", e.target.value)} />)}
         {optionalField("email", "Email", notProvided => <input id="tenant-email" className="inp" type="email" disabled={notProvided} value={form.email} onChange={e => set("email", e.target.value)} />)}

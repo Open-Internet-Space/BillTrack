@@ -120,7 +120,8 @@
           "path": "frontend/src/shared/format.js",
           "symbols": [
             "formatCurrency",
-            "formatDate"
+            "formatDate",
+            "allotteeLabel"
           ],
           "role": "Display-only currency and date formatting; not financial calculations."
         }
@@ -372,7 +373,7 @@
           "symbols": [
             "Tenant"
           ],
-          "role": "Stored allottee parameters, last-billed annotation and penalty configuration lookup."
+          "role": "Stored allottee parameters, last-billed annotation and penalty configuration lookup. Optional allotment_description and display_name distinguish same-name records; legal name stays separate."
         },
         {
           "path": "estate_app/views/tenants.py",
@@ -391,7 +392,9 @@
       ],
       "tests": [
         "frontend/src/features/allottees/allottees.test.jsx",
-        "estate_app/tests/test_allottees.py"
+        "estate_app/tests/test_allottees.py",
+        "estate_app/tests/test_allotment_description.py",
+        "frontend/src/features/allottees/allotmentDescription.test.jsx"
       ],
       "settings": "Allottee records and their billing/penalty parameters are editable through the app/admin.",
       "caution": "Tenant remains the internal model/API name. Preserve UUIDs, chronological sorting and never-billed ordering."
@@ -1864,11 +1867,32 @@
           "path": "frontend/src/features/email-drafts/email-drafts.css",
           "symbols": [],
           "role": "Responsive draft workspace styling"
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/emailtemplate/change_form.html",
+          "role": "Admin placeholder picker with human-readable descriptions",
+          "symbols": []
+        },
+        {
+          "path": "estate_app/static/estate_app/email_template_placeholders.js",
+          "role": "Insert selected placeholder at the Subject/Body caret, with safe text descriptions",
+          "symbols": []
+        },
+        {
+          "path": "estate_app/static/estate_app/email_template_placeholders.css",
+          "role": "Responsive Admin picker controls",
+          "symbols": []
+        },
+        {
+          "path": "estate_app/migrations/0003_tenant_allotment_description.py",
+          "role": "Optional allotment identifier with blank defaults",
+          "symbols": []
         }
       ],
       "tests": [
         "estate_app/tests/test_email_drafts.py",
-        "frontend/src/features/email-drafts/emailDrafts.test.jsx"
+        "frontend/src/features/email-drafts/emailDrafts.test.jsx",
+        "frontend/src/features/email-drafts/placeholderPicker.test.js"
       ]
     }
   ],

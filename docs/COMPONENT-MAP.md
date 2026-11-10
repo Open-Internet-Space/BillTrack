@@ -164,7 +164,7 @@ Pagination, filter helpers, refresh buttons, money/date formatting, badges and k
 | [frontend/src/RefreshButton.jsx](../frontend/src/RefreshButton.jsx) | `RefreshButton` | Reusable refresh button and busy presentation. |
 | [frontend/src/shared/Badges.jsx](../frontend/src/shared/Badges.jsx) | `StatusBadge`, `TypeBadge` | Paid/unpaid/partial and allottee-type badge appearance. |
 | [frontend/src/shared/ModalOverlay.jsx](../frontend/src/shared/ModalOverlay.jsx) | `ModalOverlay` | Dialog frame, focus restoration, Escape behavior and save/session feedback. |
-| [frontend/src/shared/format.js](../frontend/src/shared/format.js) | `formatCurrency`, `formatDate` | Display-only currency and date formatting; not financial calculations. |
+| [frontend/src/shared/format.js](../frontend/src/shared/format.js) | `formatCurrency`, `formatDate`, `allotteeLabel` | Display-only currency and date formatting; not financial calculations. |
 
 **Settings first:** No administrator setting; edit the indicated source.
 
@@ -291,7 +291,7 @@ List columns, search/sort and Raise Bill shortcut are in Allottees; model annota
 
 | File | Named parts | What to change here |
 | --- | --- | --- |
-| [estate_app/models/allottees.py](../estate_app/models/allottees.py) | `Tenant` | Stored allottee parameters, last-billed annotation and penalty configuration lookup. |
+| [estate_app/models/allottees.py](../estate_app/models/allottees.py) | `Tenant` | Stored allottee parameters, last-billed annotation and penalty configuration lookup. Optional allotment_description and display_name distinguish same-name records; legal name stays separate. |
 | [estate_app/views/tenants.py](../estate_app/views/tenants.py) | `TenantViewSet` | Allottee API queryset and annotations. |
 | [frontend/src/features/allottees/Allottees.jsx](../frontend/src/features/allottees/Allottees.jsx) | `Allottees` | Allottee list rows, filters, billed-month sorting and Raise Bill navigation. |
 
@@ -299,7 +299,7 @@ List columns, search/sort and Raise Bill shortcut are in Allottees; model annota
 
 **Keep in mind:** Tenant remains the internal model/API name. Preserve UUIDs, chronological sorting and never-billed ordering.
 
-**Verify:** [frontend/src/features/allottees/allottees.test.jsx](../frontend/src/features/allottees/allottees.test.jsx), [estate_app/tests/test_allottees.py](../estate_app/tests/test_allottees.py).
+**Verify:** [frontend/src/features/allottees/allottees.test.jsx](../frontend/src/features/allottees/allottees.test.jsx), [estate_app/tests/test_allottees.py](../estate_app/tests/test_allottees.py), [estate_app/tests/test_allotment_description.py](../estate_app/tests/test_allotment_description.py), [frontend/src/features/allottees/allotmentDescription.test.jsx](../frontend/src/features/allottees/allotmentDescription.test.jsx).
 
 <a id="allottee-form"></a>
 ## Add/edit allottee form
@@ -1004,9 +1004,13 @@ Save reusable named templates in Admin; merge selected allottee and bill details
 | [estate_app/migrations/0002_email_templates.py](../estate_app/migrations/0002_email_templates.py) | `seed_templates` | Additive template/default-CC schema and generic template seeds |
 | [frontend/src/features/email-drafts/EmailDrafts.jsx](../frontend/src/features/email-drafts/EmailDrafts.jsx) | `EmailDrafts` | Choose a saved template, merge details, edit temporarily and copy; no saved allottee drafts |
 | [frontend/src/features/email-drafts/email-drafts.css](../frontend/src/features/email-drafts/email-drafts.css) |  | Responsive draft workspace styling |
+| [estate_app/templates/admin/estate_app/emailtemplate/change_form.html](../estate_app/templates/admin/estate_app/emailtemplate/change_form.html) |  | Admin placeholder picker with human-readable descriptions |
+| [estate_app/static/estate_app/email_template_placeholders.js](../estate_app/static/estate_app/email_template_placeholders.js) |  | Insert selected placeholder at the Subject/Body caret, with safe text descriptions |
+| [estate_app/static/estate_app/email_template_placeholders.css](../estate_app/static/estate_app/email_template_placeholders.css) |  | Responsive Admin picker controls |
+| [estate_app/migrations/0003_tenant_allotment_description.py](../estate_app/migrations/0003_tenant_allotment_description.py) |  | Optional allotment identifier with blank defaults |
 
 **Settings first:** Admin Email templates and System Settings default CC addresses; saved templates stay in private SQLite.
 
 **Keep in mind:** Merged emails are temporary, never saved by allottee and never sent. Full backups preserve templates; business JSON does not.
 
-**Verify:** [estate_app/tests/test_email_drafts.py](../estate_app/tests/test_email_drafts.py), [frontend/src/features/email-drafts/emailDrafts.test.jsx](../frontend/src/features/email-drafts/emailDrafts.test.jsx).
+**Verify:** [estate_app/tests/test_email_drafts.py](../estate_app/tests/test_email_drafts.py), [frontend/src/features/email-drafts/emailDrafts.test.jsx](../frontend/src/features/email-drafts/emailDrafts.test.jsx), [frontend/src/features/email-drafts/placeholderPicker.test.js](../frontend/src/features/email-drafts/placeholderPicker.test.js).

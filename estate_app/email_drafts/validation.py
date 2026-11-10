@@ -3,7 +3,16 @@ from string import Formatter
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 
-PLACEHOLDERS=('allottee_name','organisation_name','signing_authority','preparation_date','bill_details','outstanding_total')
+PLACEHOLDER_DETAILS=(
+    ('allottee_name', 'Allottee name', 'The selected person or business name.', False),
+    ('allotment_description', 'Allotment description', 'The shop, premises or other identifier for this allotment; blank if not entered.', False),
+    ('organisation_name', 'Organisation name', 'The organisation name configured in System Settings.', False),
+    ('signing_authority', 'Signing authority', 'The signing authority configured in System Settings; may contain multiple lines.', True),
+    ('preparation_date', 'Preparation date', 'The date this email is generated.', False),
+    ('bill_details', 'Bill details', 'References, billing periods, receipt/due status and remaining amounts for selected bills.', True),
+    ('outstanding_total', 'Outstanding total', 'The total outstanding for selected bills in INR.', False),
+)
+PLACEHOLDERS=tuple(item[0] for item in PLACEHOLDER_DETAILS)
 HELP='Available placeholders: '+', '.join('{'+key+'}' for key in PLACEHOLDERS)
 
 def validate_template(value):

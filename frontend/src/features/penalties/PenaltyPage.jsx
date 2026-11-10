@@ -24,7 +24,7 @@ export function PenaltyPage({ bills, tenants, refresh, refreshing }) {
     vendor.penalty += Number(b.penalty || 0);
     vendor.days_overdue = Math.max(vendor.days_overdue, Number(b.days_overdue || 0));
     return groups;
-  }, {})).filter(b => b.tenant_name?.toLowerCase().includes(name.trim().toLowerCase()))
+  }, {})).filter(b => (b.tenant_display_name || b.tenant_name)?.toLowerCase().includes(name.trim().toLowerCase()))
     .filter(b => type === "all" || b.tenant_type === type);
   const totalPenalty = vendors.reduce((s, b) => s + b.penalty, 0);
   const pagination = usePagination(vendors);
@@ -67,7 +67,7 @@ export function PenaltyPage({ bills, tenants, refresh, refreshing }) {
             {pageVendors.map(b => (
               <Fragment key={b.tenant}>
               <tr className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
-                <td style={{ padding: "10px 14px" }}><button aria-expanded={expandedTenant === b.tenant} onClick={() => setExpandedTenant(expandedTenant === b.tenant ? null : b.tenant)} style={{ background: "none", border: 0, color: "#e6edf3", padding: 0, textAlign: "left", font: "inherit", fontWeight: 600 }}>{expandedTenant === b.tenant ? "▾ " : "▸ "}{b.tenant_name}</button><br /><span style={{ fontSize: 11, color: "#8b949e" }}>{b.tenant_type}</span></td>
+                <td style={{ padding: "10px 14px" }}><button aria-expanded={expandedTenant === b.tenant} onClick={() => setExpandedTenant(expandedTenant === b.tenant ? null : b.tenant)} style={{ background: "none", border: 0, color: "#e6edf3", padding: 0, textAlign: "left", font: "inherit", fontWeight: 600 }}>{expandedTenant === b.tenant ? "▾ " : "▸ "}{(b.tenant_display_name || b.tenant_name)}</button><br /><span style={{ fontSize: 11, color: "#8b949e" }}>{b.tenant_type}</span></td>
                 <td style={{ padding: "10px 14px" }}>{b.bill_count}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", color: "#f59e0b" }}>{formatCurrency(b.balance_due)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", color: "#f87171", fontWeight: 700 }}>{b.days_overdue}d</td>

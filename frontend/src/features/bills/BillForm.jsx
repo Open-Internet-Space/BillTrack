@@ -1,3 +1,4 @@
+import { allotteeLabel } from "../../shared/format.js";
 import { useState, useEffect, useMemo } from "react";
 
 export function BillForm({ tenants, initialTenant, onSave, onClose }) {
@@ -85,7 +86,7 @@ export function BillForm({ tenants, initialTenant, onSave, onClose }) {
     <div style={{ width: 680, maxWidth: "100%" }}>
       <h2 id="modal-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #21262d" }}>Raise Bill</h2>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div style={{ gridColumn: "1/-1" }}><label htmlFor="billform-tenant">Allottee</label><select id="billform-tenant" className="inp" value={form.tenant} onChange={e => set("tenant", e.target.value)}>{activeTenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+        <div style={{ gridColumn: "1/-1" }}><label htmlFor="billform-tenant">Allottee</label><select id="billform-tenant" className="inp" value={form.tenant} onChange={e => set("tenant", e.target.value)}>{activeTenants.map(t => <option key={t.id} value={t.id}>{allotteeLabel(t)}</option>)}</select></div>
         <div><label htmlFor="billform-from-month">From Month</label><input id="billform-from-month" className="inp" type="month" value={form.from_period} onChange={e => set("from_period", e.target.value)} /></div>
         <div><label htmlFor="billform-to-month">To Month</label><input id="billform-to-month" className="inp" type="month" value={form.to_period} onChange={e => set("to_period", e.target.value)} /></div>
         <div><label htmlFor="billform-rent">Rent (₹)</label><input id="billform-rent" className="inp" type="number" value={form.rent} onChange={e => set("rent", e.target.value)} /></div>

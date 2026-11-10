@@ -17,7 +17,7 @@ export function BillEditForm({ bill, onSave, onClose }) {
   const invalid = !form.due_date || form.issue_date > new Date().toLocaleDateString("en-CA") || [form.rent, form.electric, form.water].some(value => Number(value) < 0);
 
   return <div style={{ width: 560, maxWidth: "100%" }}>
-    <h2 id="modal-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #21262d" }}>Edit Bill · {bill.invoice_no || `${bill.tenant_name} ${bill.month_name} ${bill.year}`}</h2>
+    <h2 id="modal-title" style={{ fontSize: 24, fontWeight: 700, marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #21262d" }}>Edit Bill · {bill.invoice_no || `${(bill.tenant_display_name || bill.tenant_name)} ${bill.month_name} ${bill.year}`}</h2>
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
       <div><label htmlFor="billeditform-rent">Rent (₹)</label><input id="billeditform-rent" className="inp" type="number" step="0.01" min="0" value={form.rent} onChange={e => set("rent", e.target.value)} /></div>
       <div><label htmlFor="billeditform-electricity">Electricity (₹)</label><input id="billeditform-electricity" className="inp" type="number" step="0.01" min="0" value={form.electric} onChange={e => set("electric", e.target.value)} /></div>

@@ -6,11 +6,15 @@ from ..admin_pagination import PaginationAdminMixin
 
 @admin.register(Tenant)
 class TenantAdmin(PaginationAdminMixin, admin.ModelAdmin):
-    list_display = ['name', 'uuid', 'type', 'contact', 'email', 'gstin', 'last_billed_month', 'receipt_payment_period', 'active_badge']
+    list_display = ['allottee_label', 'uuid', 'type', 'contact', 'email', 'gstin', 'last_billed_month', 'receipt_payment_period', 'active_badge']
     exclude = ['due_days']
     readonly_fields = ['receipt_payment_period', 'last_billed_month']
-    search_fields = ['name', 'uuid', 'contact', 'email', 'gstin']
+    search_fields = ['name', 'allotment_description', 'uuid', 'contact', 'email', 'gstin']
     list_filter = ['type', 'active', 'gst_applicable', 'penalty_type']
+
+    @admin.display(description='Name / allotment', ordering='name')
+    def allottee_label(self, obj):
+        return obj.display_name
 
     def get_queryset(self, request):
         return Tenant.with_last_billed_month(super().get_queryset(request))

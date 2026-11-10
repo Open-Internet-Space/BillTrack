@@ -6,11 +6,14 @@ BillTrack saves **named reusable templates**, not allottee-specific emails. Like
 
 Admin → Email templates allows adding, editing, disabling or deleting named templates. Three generic templates are installed once: Invoice covering letter, Payment reminder and Overdue notice. Save wording with placeholders, rather than real vendor details. Each template can be used for any allottee.
 
+Use **Insert placeholder** above the form: choose Subject or Body, choose a labelled field with its description, and click Insert placeholder. Clicking inside Subject or Body selects that destination automatically. The field is inserted at the cursor or replaces selected text. Save the template afterward. Multiline fields are offered for the Body only.
+
 Subject and body accept these literal placeholders:
 
 | Placeholder | Contents |
 | --- | --- |
 | `{allottee_name}` | Selected allottee's name |
+| `{allotment_description}` | Optional identifier for this specific allotment, for example Shop 12 |
 | `{organisation_name}` | Private organisation name from System Settings |
 | `{signing_authority}` | Private signing authority |
 | `{preparation_date}` | Date of generation |

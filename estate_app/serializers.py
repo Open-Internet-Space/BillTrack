@@ -27,6 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
 # ── Tenant ────────────────────────────────────────────────────────────────────
 class TenantSerializer(serializers.ModelSerializer):
     last_billed_month = serializers.ReadOnlyField()
+    display_name = serializers.ReadOnlyField()
     custom_penalty_rate = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
     custom_penalty_lumpsum = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
 
@@ -41,7 +42,7 @@ class TenantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tenant
-        fields = ['id', 'uuid', 'name', 'type', 'contact', 'contact_not_provided',
+        fields = ['id', 'uuid', 'name', 'allotment_description', 'display_name', 'type', 'contact', 'contact_not_provided',
                   'email', 'email_not_provided', 'gstin', 'gstin_not_provided',
                   'address', 'address_not_provided', 'active',
                   'due_days', 'penalty_type', 'custom_penalty_rate', 'custom_penalty_lumpsum',
@@ -67,13 +68,14 @@ class PaymentSerializer(serializers.ModelSerializer):
     bill_invoice = serializers.CharField(source='bill.invoice_no', read_only=True)
     bill_tenant = serializers.IntegerField(source='bill.tenant_id', read_only=True)
     bill_tenant_name = serializers.CharField(source='bill.tenant.name', read_only=True)
+    bill_tenant_display_name = serializers.CharField(source='bill.tenant.display_name', read_only=True)
     bill_year = serializers.IntegerField(source='bill.year', read_only=True)
     bill_month = serializers.IntegerField(source='bill.month', read_only=True)
     bill_period = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
-        fields = ['id', 'bill', 'bill_invoice', 'bill_tenant', 'bill_tenant_name', 'bill_year', 'bill_month', 'bill_period', 'amount', 'payment_date',
+        fields = ['id', 'bill', 'bill_invoice', 'bill_tenant', 'bill_tenant_name', 'bill_tenant_display_name', 'bill_year', 'bill_month', 'bill_period', 'amount', 'payment_date',
                   'penalty_paid', 'receipt_no', 'notes',
                   'recorded_by', 'recorded_by_name', 'created_at']
         read_only_fields = ['id', 'recorded_by', 'created_at']
@@ -112,6 +114,7 @@ class BillSerializer(serializers.ModelSerializer):
 
     # Tenant info (read-only)
     tenant_name = serializers.CharField(source='tenant.name', read_only=True)
+    tenant_display_name = serializers.CharField(source='tenant.display_name', read_only=True)
     tenant_type = serializers.CharField(source='tenant.type', read_only=True)
     tenant_due_days = serializers.IntegerField(source='tenant.due_days', read_only=True)
 
@@ -148,7 +151,7 @@ class BillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bill
         fields = [
-            'id', 'invoice_no', 'tenant', 'tenant_name', 'tenant_type', 'tenant_due_days',
+            'id', 'invoice_no', 'tenant', 'tenant_name', 'tenant_display_name', 'tenant_type', 'tenant_due_days',
             'month', 'month_name', 'year',
             'rent', 'electric', 'electric_reading', 'water', 'gst_treatment',
             'gst_on_rent', 'cgst_on_rent', 'sgst_on_rent', 'igst_on_rent', 'rent_with_gst',

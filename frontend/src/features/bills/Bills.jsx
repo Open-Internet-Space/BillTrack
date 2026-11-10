@@ -1,3 +1,4 @@
+import { allotteeLabel } from "../../shared/format.js";
 import { BillFilters } from "./BillFilters";
 import { BillTable } from "./BillTable";
 import { useState, useEffect, useMemo } from "react";
@@ -12,9 +13,9 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
   const [filters, setFilters] = useState({ tenant: String(initialContext?.tenant || "all"), status: "all", receipt: "all", search: "", type: "all", year: "all", month: "all", billId: initialContext?.billId || null });
   const [selectedBillIds, setSelectedBillIds] = useState([]);
   const tenantOptions = useMemo(() => {
-    const map = new Map(tenants.map(t => [String(t.id), t.name]));
+    const map = new Map(tenants.map(t => [String(t.id), allotteeLabel(t)]));
     billRows.forEach(b => {
-      if (b.tenant && !map.has(String(b.tenant))) map.set(String(b.tenant), b.tenant_name);
+      if (b.tenant && !map.has(String(b.tenant))) map.set(String(b.tenant), (b.tenant_display_name || b.tenant_name));
     });
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [billRows, tenants]);
@@ -31,7 +32,7 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
   const types = [...new Set(billRows.map(b => b.tenant_type).filter(Boolean))].sort();
   const filteredBillRows = useMemo(() => {
     return billRows.filter(b => {
-      if (!matchesSearch(filters.search, b.invoice_no, b.dispatch_ref_no, b.tenant_name)) return false;
+      if (!matchesSearch(filters.search, b.invoice_no, b.dispatch_ref_no, (b.tenant_display_name || b.tenant_name))) return false;
       if (filters.type !== "all" && b.tenant_type !== filters.type) return false;
       if (filters.billId && b.id !== filters.billId) return false;
       if (filters.tenant !== "all" && String(b.tenant) !== filters.tenant) return false;

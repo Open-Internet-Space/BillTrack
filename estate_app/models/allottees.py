@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import RegexValidator
 from decimal import Decimal
 import datetime
 import uuid
@@ -22,6 +23,7 @@ class Tenant(models.Model):
     # Basic Info
     uuid       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     name       = models.CharField(max_length=200, help_text="Allottee/Business name")
+    allotment_description = models.CharField(max_length=200, blank=True, default='', validators=[RegexValidator(r'\A[^\r\n]*\Z', 'Use one line for the allotment description.')], help_text='Optional identifier, for example Shop 12, Market Block. Shown beside the name in lists and selectors.')
     type       = models.CharField(max_length=50)
     contact    = models.CharField(max_length=20, blank=True)
     contact_not_provided = models.BooleanField(default=False, verbose_name='Contact: Not Provided')
@@ -57,8 +59,12 @@ class Tenant(models.Model):
         verbose_name = 'Allottee'
         verbose_name_plural = 'Allottees'
 
+    @property
+    def display_name(self):
+        return f"{self.name} — {self.allotment_description}" if self.allotment_description else self.name
+
     def __str__(self):
-        return self.name
+        return self.display_name
 
     @classmethod
     def with_last_billed_month(cls, queryset=None):

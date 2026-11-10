@@ -66,6 +66,10 @@ def validate_data(data):
                 or not isinstance(record['fields'], dict)):
             raise ValidationError('The export contains an invalid record or unsupported model.')
         label, fields = record['model'], record['fields']
+        if label == 'estate_app.tenant':
+            fields.setdefault('allotment_description', '')
+        if label == 'estate_app.systemsettings':
+            fields.setdefault('email_draft_cc', '')
         expected = {field.name for field in MODEL_MAP[label]._meta.fields if not field.primary_key}
         if set(fields) != expected or record['pk'] in ids[label]:
             raise ValidationError('The export has duplicate records or missing/unknown fields.')

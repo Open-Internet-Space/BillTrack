@@ -38,7 +38,7 @@ class BillAdmin(PaginationAdminMixin, admin.ModelAdmin):
     form = BillAdminForm
     change_list_template = 'admin/estate_app/bill/change_list.html'
     actions = ['print_selected_bills']
-    search_fields = ['invoice_no', 'dispatch_ref_no', 'tenant__name', 'notes']
+    search_fields = ['invoice_no', 'dispatch_ref_no', 'tenant__name', 'tenant__allotment_description', 'notes']
     list_filter = ['status', ReceiptStatusFilter, 'tenant__type',
                    ('tenant', admin.RelatedOnlyFieldListFilter), 'year', 'month', 'due_date']
     date_hierarchy = 'issue_date'

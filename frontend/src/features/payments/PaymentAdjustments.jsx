@@ -9,7 +9,7 @@ export function PaymentAdjustments({ payments, bills, refresh, refreshing }) {
   const [filters, setFilters] = useState({ search: "", year: "all", month: "all", from: "", to: "" });
   const years = [...new Set(payments.map(p => p.bill_year).filter(Boolean))].sort((a, b) => b - a);
   const months = [...new Set(payments.map(p => p.bill_month).filter(Boolean))].sort((a, b) => a - b);
-  const vendors = [...new Map(payments.map(p => [String(p.bill_tenant), p.bill_tenant_name])).entries()]
+  const vendors = [...new Map(payments.map(p => [String(p.bill_tenant), (p.bill_tenant_display_name || p.bill_tenant_name)])).entries()]
     .sort((a, b) => a[1].localeCompare(b[1]));
   const billsById = new Map(bills.map(b => [b.id, b]));
   const groups = new Map();
