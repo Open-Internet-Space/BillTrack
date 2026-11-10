@@ -5,7 +5,7 @@ Use an isolated environment, synthetic accounts and a separate database/media/po
 ```sh
 python manage.py check
 python manage.py makemigrations --check --dry-run
-python manage.py test
+python manage.py test estate_app
 python -m unittest discover -s scripts -p "test_*.py"
 python scripts/build_component_map.py --check
 ```
@@ -17,3 +17,5 @@ Organisation settings have one authority: local SystemSettings plus private medi
 This repository starts with a fresh schema, not inherited migration records. Do not connect it to an existing installation's database without a separate migration plan. No public hosting, visibility change or release is part of this preparation.
 
 Manual template merging uses the additive 0002_email_templates migration in the clean-source lineage. Reusable templates are local database records; merged emails are temporary; generic seed wording contains no institutional data. Test generation without SMTP and keep snapshots/credentials outside Git. See [email draft behaviour and API](EMAIL-DRAFTS.md).
+
+Use the maintained estate_app test label so old generated test scripts in ignored output folders are not discovered. SMTP preview tests use local-memory/fake SMTP backends, never live mailboxes. Deploying selected updates into a historical installation requires its compatible migration chain and private rollback package; never replace its database with the clean initial schema.

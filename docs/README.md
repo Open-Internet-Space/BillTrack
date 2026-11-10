@@ -1,6 +1,6 @@
 # BillTrack documentation
 
-This private clean repository is for fresh installations only. It has a new migration history and no institutional data or old Git history. The existing private installation is unchanged. Do not apply this schema to an existing database.
+This private clean repository is for fresh installations only. It has a new migration history and no institutional data or old Git history. Selected workflow updates have been deployed separately as a compatibility build that retains the existing installation's original database and migration chain. Do not apply this schema to an existing database.
 
 - [Private organisation configuration](PRIVATE-CONFIGURATION.md)
 - [Windows setup](SETUP-WINDOWS.md), [Linux setup](SETUP-LINUX.md), [daily operation](PRODUCTION-WINDOWS.md)

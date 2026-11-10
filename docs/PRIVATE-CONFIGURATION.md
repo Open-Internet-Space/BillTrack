@@ -9,3 +9,5 @@ The organisation profile starts blank. Configure the organisation name before pr
 Exports and full backups intentionally include private organisation/configuration data and logos. Keep them outside Git, share only with authorised recipients, and test restoration. Ignore rules and release checks reduce accidental uploads; they cannot prevent someone deliberately publishing private files or forcing them into Git.
 
 The database and backups are not encrypted by these changes. Use operating-system access controls and an appropriate private backup destination.
+
+For SMTP changes, edit the .env beside the running installation's manage.py and restart that server; another development checkout has its own .env. DEFAULT_FROM_EMAIL must include a complete mailbox address, optionally preceded by a display name. See [SMTP reminder setup and preview](EMAIL-REMINDERS.md).
