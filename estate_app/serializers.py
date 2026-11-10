@@ -114,14 +114,14 @@ class BillSerializer(serializers.ModelSerializer):
     tenant_name = serializers.CharField(source='tenant.name', read_only=True)
     tenant_type = serializers.CharField(source='tenant.type', read_only=True)
     tenant_due_days = serializers.IntegerField(source='tenant.due_days', read_only=True)
-    
+
     # GST fields (ALL backend-generated)
     gst_on_rent     = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     cgst_on_rent    = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     sgst_on_rent    = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     igst_on_rent    = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     rent_with_gst   = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
-    
+
     # Calculated amounts (ALL backend-generated, React NEVER calculates these)
     total_amount    = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     amount_paid     = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
@@ -135,13 +135,13 @@ class BillSerializer(serializers.ModelSerializer):
     penalty_start_date = serializers.DateField(read_only=True)
     penalty_calculation = serializers.ReadOnlyField()
     receipt_status = serializers.CharField(read_only=True)
-    
+
     # Month name (helper for display)
     month_name = serializers.SerializerMethodField()
-    
+
     # Metadata
     created_by_name = serializers.SerializerMethodField()
-    
+
     # Payments (nested)
     payments = PaymentSerializer(many=True, read_only=True)
 

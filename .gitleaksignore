@@ -1,0 +1,11 @@
+# Exact reviewed synthetic-test findings only; no directory-wide exceptions.
+# Non-production settings fixture / public RFC TOTP sample.
+93230261763e8296369b5024e34f22baa2ab0a8a:estate_app/tests/test_production.py:generic-api-key:31
+# Non-production settings fixture / public RFC TOTP sample.
+93230261763e8296369b5024e34f22baa2ab0a8a:estate_app/tests/test_production.py:generic-api-key:39
+# Non-production settings fixture / public RFC TOTP sample.
+93230261763e8296369b5024e34f22baa2ab0a8a:estate_app/tests/test_production.py:generic-api-key:47
+# Non-production settings fixture / public RFC TOTP sample.
+93230261763e8296369b5024e34f22baa2ab0a8a:estate_app/tests/test_production.py:generic-api-key:55
+# Non-production settings fixture / public RFC TOTP sample.
+93230261763e8296369b5024e34f22baa2ab0a8a:estate_app/tests/test_emergency_recovery.py:generic-api-key:22

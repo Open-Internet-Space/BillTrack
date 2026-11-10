@@ -73,4 +73,3 @@ class InvoicePrintSelectionTests(TestCase):
             self.assertContains(response, expected)
             self.assertNotContains(response, '12% p.a.')
             self.assertNotContains(response, 'M/s Print Tenant')
-

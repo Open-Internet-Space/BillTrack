@@ -158,5 +158,3 @@ class ReceiptBillingTests(TestCase):
         self.assertEqual(bill.issue_date, original_issue)
         self.assertEqual(bill.due_date, original_due)
         self.assertEqual(bill.notes, 'Only save this note')
-
-
