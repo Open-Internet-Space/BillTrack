@@ -1,3 +1,4 @@
+from .transaction_case import ActivityTransactionTestCase
 import re
 from unittest.mock import patch
 
@@ -45,7 +46,7 @@ class EmailAccountTests(TestCase):
         self.assertFalse(self.client.login(username=user.email, password=self.password))
         admin = User.objects.create_superuser('approver', 'boss@example.org', self.password)
         self.client.force_login(admin)
-        response = self.client.post(reverse('account-approvals'), {'account': access.pk, 'decision': 'approve'})
+        response = self.client.post(reverse('account-approvals'), {'account': access.pk, 'decision': 'approve', 'change_reason': 'Verified applicant identity'})
         self.assertEqual(response.status_code, 302)
         user.refresh_from_db()
         self.assertTrue(user.is_active)
@@ -95,7 +96,7 @@ class EmailAccountTests(TestCase):
         access = AccountAccess.objects.get(user__email='office@example.org')
         admin = User.objects.create_superuser('approver', '', self.password)
         self.client.force_login(admin)
-        self.client.post(reverse('account-approvals'), {'account': access.pk, 'decision': 'approve'})
+        self.client.post(reverse('account-approvals'), {'account': access.pk, 'decision': 'approve', 'change_reason': 'Verified applicant identity'})
         access.user.refresh_from_db()
         self.assertFalse(access.user.is_active)
 
@@ -337,7 +338,7 @@ class EmailAccountTests(TestCase):
 @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
                    EMAIL_HOST_USER='test@example.org', EMAIL_HOST_PASSWORD='test-only',
                    DEFAULT_FROM_EMAIL='test@example.org', ACCOUNT_EMAIL_ENABLED=True)
-class ConcurrentEmailAccountTests(TransactionTestCase):
+class ConcurrentEmailAccountTests(ActivityTransactionTestCase):
     def parallel(self, action):
         from concurrent.futures import ThreadPoolExecutor
         from threading import Barrier

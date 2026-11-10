@@ -1,5 +1,7 @@
 # BillTrack
 
+Superuser corrections and retained before/after snapshots: [Activity log](docs/ACTIVITY-HISTORY.md).
+
 Every bill. Every payment. In view.
 
 An [Open Internet](https://www.anopeninternet.eu.org/) Project, developed independently as a personal project for billing and estate management.

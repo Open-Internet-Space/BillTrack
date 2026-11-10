@@ -24,9 +24,12 @@
       <h2>Import an exported file</h2>
       <p>A safety backup is saved before changes. If validation or import fails, the existing database is kept.</p>
       <p><strong>Replace:</strong> removes current allottees, bills, payments and settings and restores the file.</p>
+      <details><summary>Review records affected by Replace</summary><ul>{{ replacement_plan.affected|unordered_list }}</ul></details>
+      <input type="hidden" name="confirmation" value="{{ replacement_plan.confirmation }}">
       <p><strong>Merge:</strong> adds missing records and keeps existing records and settings. Allottees match by UUID, bills by allottee and month/year, and payments by UUID. Conflicting invoice numbers stop the import.</p>
       <p>Existing user accounts are preserved in both modes. Attribution matches local usernames; missing users are left blank. Files up to 25 MB are supported.</p>
       {{ form.non_field_errors }}
+      <div class="form-row">{{ form.change_reason.errors }}{{ form.change_reason.label_tag }} {{ form.change_reason }}</div>
       <div class="form-row">{{ form.file.errors }}{{ form.file.label_tag }} {{ form.file }}</div>
       <fieldset class="module">
         <legend>{{ form.mode.label }}</legend>

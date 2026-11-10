@@ -61,7 +61,7 @@ export default class API {
 
   static request(endpoint, options = {}) {
     const changesData = Boolean(options.method && options.method !== "GET" && endpoint !== "/auth/login/" && endpoint !== "/reports/");
-    return this.perform(endpoint, { ...options, headers: this.headers() },
+    return this.perform(endpoint, { ...options, headers: { ...this.headers(), ...options.headers } },
       response => response.status === 204 ? null : response.json(), changesData);
   }
 
@@ -76,9 +76,25 @@ export default class API {
   static logout() { this.token = null; localStorage.removeItem("token"); }
   static get(endpoint) { return this.request(endpoint); }
   static post(endpoint, data) { return this.request(endpoint, { method: "POST", body: JSON.stringify(data) }); }
-  static put(endpoint, data) { return this.request(endpoint, { method: "PUT", body: JSON.stringify(data) }); }
-  static patch(endpoint, data) { return this.request(endpoint, { method: "PATCH", body: JSON.stringify(data) }); }
-  static delete(endpoint) { return this.request(endpoint, { method: "DELETE" }); }
+  static correctionReason(supplied) {
+    const reason = supplied ?? window.prompt("Reason for this change (required):", "");
+    if (reason === null) throw new Error("Change cancelled.");
+    if (!reason.trim() || reason.length > 2000) throw new Error("Enter a written reason (maximum 2000 characters).");
+    return reason.trim();
+  }
+
+  static async put(endpoint, data) {
+    return this.request(endpoint, { method: "PUT", body: JSON.stringify({ ...data, change_reason: this.correctionReason(data.change_reason) }) });
+  }
+  static async patch(endpoint, data) {
+    return this.request(endpoint, { method: "PATCH", body: JSON.stringify({ ...data, change_reason: this.correctionReason(data.change_reason) }) });
+  }
+  static async delete(endpoint) {
+    const preview = await this.get(`${endpoint}deletion-preview/`);
+    if (!window.confirm(`Confirm these effects:\n\n${preview.affected.join("\n")}\n\nActivity history will be retained.`)) throw new Error("Deletion cancelled.");
+    const reason = this.correctionReason();
+    return this.request(endpoint, { method: "DELETE", body: JSON.stringify({ change_reason: reason, confirmation: preview.confirmation }) });
+  }
 
   static async getAll(endpoint) {
     let next = endpoint;

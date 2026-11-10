@@ -2,6 +2,8 @@
 
 **Start with [Setup and updates](SETUP.md).** It explains the two folders, how updates reach the office and which instructions apply to your task.
 
+Superuser corrections and retained before/after snapshots: [Activity log](ACTIVITY-HISTORY.md).
+
 `E:\BillTrack-Clean` is the main source repository for all new development and GitHub publication. `E:\EstateManagement` is the live office installation with real records, uploads and private settings. Develop and test in the first; install tested, compatible updates in the second.
 
 ## Set up or maintain the application

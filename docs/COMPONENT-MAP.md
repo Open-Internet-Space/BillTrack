@@ -51,6 +51,7 @@ Run `python scripts/build_component_map.py` after editing the registry; use `--c
   - [Payment administration](#admin-payments)
   - [Email reminders: preview, SMTP and daily task](#email-reminders)
   - [Admin maintenance and modification guides](#admin-maintenance)
+  - [Superuser corrections and protected activity history](#activity-history)
 - [Admin export/import and safety backups](#data-transfer)
 - [API routes and validation](#api)
   - [Model exports and shared system settings](#model-exports)
@@ -120,6 +121,14 @@ Related: [authentication](#authentication), [email-accounts](#email-accounts), [
 3. Run the feature tests and full suites; do not send real mail or change dispatch/reminder state.
 
 Related: [email-drafts](#email-drafts).
+
+### Investigate or correct a business record
+
+1. Superusers use the existing model Admin with a written reason; review all related effects before confirming deletion.
+2. Search Activity log by date, actor, type, action or safe snapshot text; deleted records retain history. Passwords, OTPs, tokens and SMTP credentials are excluded.
+3. Use scripts/verify_activity_migrations.py on isolated databases for canonical and historical-chain upgrades. Do not replace either migration lineage or run a source-only production rollback.
+
+Related: [activity-history](#activity-history), [admin](#admin).
 
 <a id="interface"></a>
 ## Web application and navigation
@@ -1017,3 +1026,33 @@ Save reusable named templates in Admin; merge selected allottee and bill details
 **Keep in mind:** Merged emails are temporary, never saved by allottee and never sent. Full backups preserve templates; business JSON does not.
 
 **Verify:** [estate_app/tests/test_email_drafts.py](../estate_app/tests/test_email_drafts.py), [frontend/src/features/email-drafts/emailDrafts.test.jsx](../frontend/src/features/email-drafts/emailDrafts.test.jsx), [frontend/src/features/email-drafts/placeholderPicker.test.js](../frontend/src/features/email-drafts/placeholderPicker.test.js).
+
+<a id="activity-history"></a>
+## Superuser corrections and protected activity history
+
+Required correction reasons, signed cascade previews, immutable allowlisted SQLite audit snapshots and read-only Activity log. Payment mutation coordination and protected original reminder submissions retain financial/send evidence.
+
+| File | Named parts | What to change here |
+| --- | --- | --- |
+| [estate_app/activity/admin.py](../estate_app/activity/admin.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/api.py](../estate_app/activity/api.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/context.py](../estate_app/activity/context.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/database.py](../estate_app/activity/database.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/deletion.py](../estate_app/activity/deletion.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/middleware.py](../estate_app/activity/middleware.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/activity/__init__.py](../estate_app/activity/__init__.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/models/activity.py](../estate_app/models/activity.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/migrations/0004_activity_history.py](../estate_app/migrations/0004_activity_history.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [estate_app/migrations/0005_protected_submissions.py](../estate_app/migrations/0005_protected_submissions.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [templates/admin/activity_delete.html](../templates/admin/activity_delete.html) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [templates/admin/activity_inline_delete.html](../templates/admin/activity_inline_delete.html) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [scripts/verify_activity_migrations.py](../scripts/verify_activity_migrations.py) |  | Transactional audit/correction workflow, migration or isolated verification. |
+| [compatibility/estate-management/migrations/0027_activity_history.py](../compatibility/estate-management/migrations/0027_activity_history.py) |  | Equivalent schema operations for the historical migration chain only. |
+| [compatibility/estate-management/migrations/0028_protected_submissions.py](../compatibility/estate-management/migrations/0028_protected_submissions.py) |  | Equivalent schema operations for the historical migration chain only. |
+| [estate_app/reminders/locking.py](../estate_app/reminders/locking.py) |  | Cross-process active-sender lock; provider review cannot release a running SMTP attempt. |
+
+**Settings first:** Use existing Admin correction forms; SQLite schema migrations are required.
+
+**Keep in mind:** Preserve secret allowlists, immutable evidence, payment recalculation and independent reminder protection. Do not downgrade source alone.
+
+**Verify:** [estate_app/tests/test_activity.py](../estate_app/tests/test_activity.py), [estate_app/tests/transaction_case.py](../estate_app/tests/transaction_case.py).

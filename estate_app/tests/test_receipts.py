@@ -68,15 +68,15 @@ class ReceiptBillingTests(TestCase):
         bill = self.bill(due_date=datetime.date(2026, 1, 1))
         today = timezone.localdate()
         response = self.client.patch(f'/api/bills/{bill.pk}/', {
-            'issue_date': today.isoformat(), 'due_date': '2026-01-01',
+            'issue_date': today.isoformat(), 'due_date': '2026-01-01', 'change_reason': 'Confirm actual receipt',
         }, format='json')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.data['due_date'], (today + datetime.timedelta(days=5)).isoformat())
         self.assertEqual(response.data['receipt_status'], 'Receipt Confirmed')
-        response = self.client.patch(f'/api/bills/{bill.pk}/', {'due_date': '2026-01-01'}, format='json')
+        response = self.client.patch(f'/api/bills/{bill.pk}/', {'due_date': '2026-01-01', 'change_reason': 'Check derived deadline'}, format='json')
         self.assertEqual(response.data['due_date'], (today + datetime.timedelta(days=5)).isoformat())
         response = self.client.patch(f'/api/bills/{bill.pk}/', {
-            'issue_date': (today + datetime.timedelta(days=1)).isoformat(),
+            'issue_date': (today + datetime.timedelta(days=1)).isoformat(), 'change_reason': 'Invalid future receipt test',
         }, format='json')
         self.assertEqual(response.status_code, 400)
         bill.refresh_from_db()

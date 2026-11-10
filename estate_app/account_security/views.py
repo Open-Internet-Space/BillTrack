@@ -101,6 +101,11 @@ def approvals(request):
         return HttpResponseForbidden('Only a superuser can manage account approvals.')
     if request.method == 'POST':
         try:
+            from ..activity.admin import ReasonForm, apply_reason
+            reason_form = ReasonForm(request.POST)
+            if not reason_form.is_valid():
+                raise service.AccountError('Enter a written reason for this account decision.')
+            apply_reason(reason_form.cleaned_data['change_reason'])
             service.decide(int(request.POST.get('account', '')), request.user, request.POST.get('decision'))
             messages.success(request, 'Account decision saved.')
         except (service.AccountError, AccountAccess.DoesNotExist, ValueError) as exc:

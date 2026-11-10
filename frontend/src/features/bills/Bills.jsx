@@ -116,7 +116,6 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
     openPrint(`/invoice/bulk/?ids=${selectedBillIds.join(",")}`);
   };
   const deleteBill = async (bill) => {
-    if (!window.confirm(`Delete ${bill.invoice_no || "this bill"}? Payments for this bill will also be deleted.`)) return;
     try {
       await API.delete(`/bills/${bill.id}/`);
       showToast?.("Bill deleted");

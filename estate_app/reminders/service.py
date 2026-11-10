@@ -11,11 +11,13 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage, get_connection
 from django.core.validators import validate_email
 from django.db.models import F
+from django.db import transaction
 from django.utils import timezone
 from ..models import Bill
-from ..models.reminders import ReminderSettings, ReminderDelivery
+from ..models.reminders import ReminderSettings, ReminderDelivery, ReminderSubmission
 from ..views.bills import bill_read_queryset
 from .delivery import send_message, PartialRecipientAcceptance
+from .locking import submission_lock
 
 OFFSETS=(-1,0,1,7,14,26)
 BLOCKING=('preparing','sending','accepted','review')
@@ -50,7 +52,7 @@ def mail_configured():
 def preview(today=None,ignore_log_pk=None):
     today=today or timezone.localdate()
     # A three-calendar-month window is at most 92 days; retain a margin for boundary dates.
-    history=ReminderDelivery.objects.filter(send_date__gte=today-dt.timedelta(days=100),status__in=BLOCKING)
+    history=ReminderSubmission.objects.filter(send_date__gte=today-dt.timedelta(days=100),status__in=BLOCKING)
     if ignore_log_pk:
         history=history.exclude(pk=ignore_log_pk)
     blocked=set();blocked_today=set()
@@ -131,47 +133,67 @@ def send_reminders(today=None,selected=None,automatic=False,confirmed=None,user_
     groups,_=preview(today)
     groups=[group for group in groups if group['uuid'] in approved]
     for group in groups:
-        log,created=ReminderDelivery.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
-            'allottee':group['allottee'],'allottee_name':group['allottee'].name,'recipient':approved[group['uuid']]['to'],'items':group['items']})
-        if not created:
-            claimed=ReminderDelivery.objects.filter(pk=log.pk,status__in=['failed','skipped']).update(status='preparing',attempts=F('attempts')+1,error='')
-            if not claimed:
+        with transaction.atomic():
+            log,created=ReminderSubmission.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
+                'allottee_name':group['allottee'].name,'recipient':approved[group['uuid']]['to'],'items':group['items']})
+            if not created:
+                claimed=ReminderSubmission.objects.filter(pk=log.pk,status__in=['failed','skipped']).update(status='preparing',attempts=F('attempts')+1,error='')
+                if not claimed:
+                    result['skipped']+=1;continue
+                log.refresh_from_db()
+            delivery,_=ReminderDelivery.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
+                'allottee':group['allottee'],'allottee_name':log.allottee_name,'recipient':log.recipient,'items':log.items})
+            log.delivery_id=delivery.pk
+            log.message={key:approved[group['uuid']][key] for key in ('to','cc','subject','body')}
+            save_submission(log)
+        with submission_lock(log.pk):
+            # Re-read after claiming; do not hold a database transaction during network calls.
+            fresh=next((g for g in preview(today,ignore_log_pk=log.pk)[0] if g['uuid']==group['uuid']),None)
+            if fresh is None or group_fingerprint(fresh,today)!=approved[group['uuid']]['fingerprint']:
+                log.status='skipped';log.error='Reminder details changed after preview. Prepare and confirm a new preview.';save_submission(log)
                 result['skipped']+=1;continue
-            log.refresh_from_db()
-        # Re-read after claiming; do not hold a database transaction during network calls.
-        fresh=next((g for g in preview(today,ignore_log_pk=log.pk)[0] if g['uuid']==group['uuid']),None)
-        if fresh is None or group_fingerprint(fresh,today)!=approved[group['uuid']]['fingerprint']:
-            log.status='skipped';log.error='Reminder details changed after preview. Prepare and confirm a new preview.';log.save()
-            result['skipped']+=1;continue
-        log.items=fresh['items'];log.recipient=approved[group['uuid']]['to'];log.allottee_name=fresh['allottee'].name;log.save()
-        if not mail_configured():
-            log.status='failed';log.error='SMTP sender/app password is not configured.';log.save()
-            result['failed']+=1;break
-        connection=get_connection(fail_silently=False)
-        try:
-            connection.open()
-        except Exception as error:
-            log.status='failed';log.error=safe_error(error);log.save()
-            result['failed']+=1;break
-        try:
-            content=approved[group['uuid']]
-            cc=[address.strip() for address in content['cc'].replace(';',',').split(',') if address.strip()]
-            message=EmailMessage(content['subject'],content['body'],settings.DEFAULT_FROM_EMAIL,[log.recipient],cc=cc,connection=connection)
-            log.status='sending';log.save(update_fields=['status','updated_at'])
+            log.items=fresh['items'];log.recipient=approved[group['uuid']]['to'];log.allottee_name=fresh['allottee'].name;save_submission(log)
+            if not mail_configured():
+                log.status='failed';log.error='SMTP sender/app password is not configured.';save_submission(log)
+                result['failed']+=1;break
+            connection=get_connection(fail_silently=False)
             try:
-                count=send_message(message,connection)
-            except PartialRecipientAcceptance:
-                log.status='review';log.error='Some recipients were refused; others may already have received the message. Check provider activity before permitting another attempt.'
-            except (smtplib.SMTPRecipientsRefused,smtplib.SMTPSenderRefused,smtplib.SMTPDataError) as error:
-                log.status='failed';log.error=safe_error(error)
-            except Exception:
-                log.status='review';log.error='Submission may have reached the mail server. Check provider activity before permitting another attempt.'
-            else:
-                log.status='accepted' if count==1 else 'review'
-                log.error='' if count==1 else 'The backend did not confirm acceptance. Check provider activity before retrying.'
-            log.save(update_fields=['status','error','updated_at'])
-            result[{'accepted':'accepted','failed':'failed','review':'review'}[log.status]]+=1
-        finally:
-            try:connection.close()
-            except Exception:pass
+                connection.open()
+            except Exception as error:
+                log.status='failed';log.error=safe_error(error);save_submission(log)
+                result['failed']+=1;break
+            try:
+                content=approved[group['uuid']]
+                cc=[address.strip() for address in content['cc'].replace(';',',').split(',') if address.strip()]
+                message=EmailMessage(content['subject'],content['body'],settings.DEFAULT_FROM_EMAIL,[log.recipient],cc=cc,connection=connection)
+                log.status='sending';save_submission(log)
+                try:
+                    count=send_message(message,connection)
+                except PartialRecipientAcceptance:
+                    log.status='review';log.error='Some recipients were refused; others may already have received the message. Check provider activity before permitting another attempt.'
+                except (smtplib.SMTPRecipientsRefused,smtplib.SMTPSenderRefused,smtplib.SMTPDataError) as error:
+                    log.status='failed';log.error=safe_error(error)
+                except Exception:
+                    log.status='review';log.error='Submission may have reached the mail server. Check provider activity before permitting another attempt.'
+                else:
+                    log.status='accepted' if count==1 else 'review'
+                    log.error='' if count==1 else 'The backend did not confirm acceptance. Check provider activity before retrying.'
+                save_submission(log)
+                result[{'accepted':'accepted','failed':'failed','review':'review'}[log.status]]+=1
+            finally:
+                try:connection.close()
+                except Exception:pass
     return result
+
+
+@transaction.atomic
+def save_submission(log):
+    """Persist protected evidence and visible history together, without recreating deleted history."""
+    expected = getattr(log, '_expected_status', log.status)
+    log.updated_at = timezone.now()
+    values = {key:getattr(log,key) for key in ('delivery_id','message','allottee_name','recipient','items','status','error','reviewed_by','updated_at')}
+    if not ReminderSubmission.objects.filter(pk=log.pk,attempts=log.attempts,status=expected).update(**values):
+        raise ValidationError('This submission changed after it was claimed. Stop and review the current protected sending state.')
+    log._expected_status = log.status
+    ReminderDelivery.objects.filter(pk=log.delivery_id,allottee_uuid=log.allottee_uuid,send_date=log.send_date).update(
+        **{key:getattr(log,key) for key in ('allottee_name','recipient','items','status','attempts','error','reviewed_by','updated_at')})

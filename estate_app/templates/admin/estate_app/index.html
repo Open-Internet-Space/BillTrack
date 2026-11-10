@@ -12,6 +12,7 @@
   {% if user.is_superuser %}
   <div class="module">
     <h2>Maintenance and modification</h2>
+    <p><a href="{% url 'admin:estate_app_activityentry_changelist' %}">Activity log</a> — search changes and retained deleted-record snapshots.</p>
     <p><a href="{% url 'admin-rollbacks' %}">Rollbacks and backup details</a> — recovery instructions for different parts; no scripts are run here.</p>
     <p><a href="{% url 'admin-modification-guide' %}">Which code to change</a> — search sections, file paths and named code blocks.</p>
   </div>

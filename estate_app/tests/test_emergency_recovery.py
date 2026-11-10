@@ -1,3 +1,4 @@
+from .transaction_case import ActivityTransactionTestCase
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -119,7 +120,7 @@ class AuthenticatorQRTests(SimpleTestCase):
         self.assertEqual(list(svg.iter('{http://www.w3.org/2000/svg}script')), [])
 
 
-class ConcurrentEmergencyRecoveryTests(TransactionTestCase):
+class ConcurrentEmergencyRecoveryTests(ActivityTransactionTestCase):
     @override_settings(TOTP_RESET_SECRET='JBSWY3DPEHPK3PXP')
     def test_emergency_code_is_single_use_across_concurrent_different_accounts(self):
         import time

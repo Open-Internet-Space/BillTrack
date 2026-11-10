@@ -1,0 +1,11 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>Confirm inline deletions</h1>
+<p>The bill form also deletes the following payments. Review the effects before continuing; the complete bill form will still be validated.</p>
+<ul>{{ affected|unordered_list }}</ul>
+<form method="post">{% csrf_token %}
+{% for key,value in posted_fields %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+<input type="hidden" name="inline_confirmation" value="{{ confirmation }}">
+<input type="submit" value="Confirm and validate bill changes">
+</form>
+{% endblock %}

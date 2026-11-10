@@ -42,10 +42,30 @@ class AdminDataTransferTests(TestCase):
         return json.loads(response.content)
 
     def upload(self, data, mode='merge', confirm=True, client=None):
+        preview = (client or self.client).get('/admin/data-transfer/')
         return (client or self.client).post('/admin/data-transfer/', {
             'file': SimpleUploadedFile('billtrack.json', json.dumps(data).encode(), 'application/json'),
             'mode': mode, 'confirm': 'on' if confirm else '',
+            'change_reason': 'Restore reviewed synthetic records',
+            'confirmation': preview.context['replacement_plan']['confirmation'] if preview.status_code == 200 else '',
         }, follow=True)
+
+    def test_replacement_preserves_audit_snapshots_and_requires_reason(self):
+        from estate_app.models import ActivityEntry
+        exported = self.export()
+        response = self.upload(exported, 'replace')
+        self.assertContains(response, 'Import completed')
+        entries = ActivityEntry.objects.filter(source='import', action='delete')
+        self.assertEqual(set(entries.values_list('record_type', flat=True)),
+                         {'estate_app.tenant', 'estate_app.bill', 'estate_app.payment', 'estate_app.systemsettings'})
+        self.assertEqual(entries.get(record_type='estate_app.payment').actor_name, self.user.username)
+        self.assertEqual(entries.get(record_type='estate_app.tenant').before['name'], 'Original allottee')
+        count = ActivityEntry.objects.count()
+        response = self.client.post('/admin/data-transfer/', {
+            'file': SimpleUploadedFile('billtrack.json', json.dumps(exported).encode(), 'application/json'),
+            'mode': 'merge'})
+        self.assertContains(response, 'This field is required')
+        self.assertEqual(ActivityEntry.objects.count(), count)
 
     def test_export_is_complete_but_excludes_credentials(self):
         data = self.export()

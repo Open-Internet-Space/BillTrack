@@ -4,10 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ..models import Tenant
+from ..activity.api import AuditedViewSetMixin
 from ..serializers import TenantSerializer
 
 
-class TenantViewSet(viewsets.ModelViewSet):
+class TenantViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = Tenant.with_last_billed_month()
     serializer_class = TenantSerializer
     permission_classes = [IsAuthenticated]

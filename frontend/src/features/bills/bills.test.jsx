@@ -1,6 +1,7 @@
 import { act, sampleBill, fillInput, signedInApp } from "../../test-support/app";
 
 test("receipt confirmation calculates five days and sends the actual receipt date", async () => {
+  const prompt = jest.spyOn(window, 'prompt').mockReturnValue('Confirm recorded receipt date');
   const { container, close } = await signedInApp();
   try {
     const button = text => [...container.querySelectorAll("button")].find(item => item.textContent === text);
@@ -16,7 +17,7 @@ test("receipt confirmation calculates five days and sends the actual receipt dat
     await act(async () => button("Save Receipt / Dispatch").click());
     const [, options] = global.fetch.mock.calls.find(([url, options]) => url.endsWith('/bills/1/') && options?.method === 'PATCH');
     expect(JSON.parse(options.body)).toMatchObject({ issue_date: "2026-10-31", due_date: "2026-11-05" });
-  } finally { close(); }
+  } finally { close(); prompt.mockRestore(); }
 });
 
 test("pending receipt stays visible in bills but is absent from upcoming due dates", async () => {

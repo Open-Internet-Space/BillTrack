@@ -37,3 +37,27 @@ class ReminderDelivery(models.Model):
         constraints=[models.UniqueConstraint(fields=['allottee_uuid','send_date'],name='reminder_one_allottee_day')]
     def __str__(self):
         return f'{self.send_date}: {self.allottee_name} — {self.get_status_display()}'
+
+
+class ReminderSubmission(models.Model):
+    """Protected send state; visible delivery corrections never write this model."""
+    delivery_id = models.BigIntegerField(null=True, blank=True)
+    message = models.JSONField(default=dict)
+    allottee_uuid = models.UUIDField()
+    allottee_name = models.CharField(max_length=200)
+    send_date = models.DateField()
+    recipient = models.EmailField()
+    items = models.JSONField(default=list)
+    status = models.CharField(max_length=12, choices=ReminderDelivery.STATUS, default='preparing')
+    attempts = models.PositiveIntegerField(default=1)
+    error = models.CharField(max_length=300, blank=True)
+    reviewed_by = models.CharField(max_length=150, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['allottee_uuid', 'send_date'], name='submission_one_allottee_day')]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.send_date}: {self.allottee_name} — {self.get_status_display()}'

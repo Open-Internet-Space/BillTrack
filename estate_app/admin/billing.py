@@ -1,3 +1,4 @@
+from ..activity.admin import CorrectionAdminMixin
 from django.contrib import admin
 from django.contrib import messages
 from django import forms
@@ -34,7 +35,7 @@ class BillAdminForm(forms.ModelForm):
 
 
 @admin.register(Bill)
-class BillAdmin(PaginationAdminMixin, admin.ModelAdmin):
+class BillAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
     form = BillAdminForm
     change_list_template = 'admin/estate_app/bill/change_list.html'
     actions = ['print_selected_bills']
@@ -50,6 +51,7 @@ class BillAdmin(PaginationAdminMixin, admin.ModelAdmin):
     ]
 
     readonly_fields = [
+        'invoice_no',
         'gst_on_rent', 'cgst_on_rent', 'sgst_on_rent', 'igst_on_rent',
         'status', 'receipt_status', 'receipt_reset_snapshot', 'created_at', 'updated_at'
     ]

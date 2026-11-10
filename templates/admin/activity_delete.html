@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<h1>{{ title }}</h1>
+{% if perms_lacking or protected %}
+<p>Deletion is blocked by permissions or protected related records.</p>
+{{ perms_lacking|unordered_list }}{{ protected|unordered_list }}
+{% else %}
+<p>Review every affected record before confirming. Original activity history and reminder submission evidence will be retained.</p>
+<ul>{{ affected|unordered_list }}</ul>
+<form method="post">{% csrf_token %}
+{{ reason_form.as_p }}
+{% if bulk %}{% for obj in queryset %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">{% endfor %}
+<input type="hidden" name="action" value="delete_selected">{% endif %}
+<input type="hidden" name="post" value="yes">
+<input type="hidden" name="confirmation" value="{{ confirmation }}">
+<input type="submit" value="Confirm deletion">
+</form>
+{% endif %}
+{% endblock %}

@@ -56,7 +56,8 @@ class AllotmentDescriptionTests(TestCase):
         response=self.client.get('/admin/estate_app/emailtemplate/add/')
         self.assertContains(response,'Insert placeholder')
         self.assertContains(response,'Allotment description')
-        self.assertContains(response,'email_template_placeholders.js')
+        from django.templatetags.static import static
+        self.assertContains(response, static('estate_app/email_template_placeholders.js'))
         tenant=Tenant.objects.create(name='Same Person',type='Shop',allotment_description='Shop 12')
         template=EmailTemplate.objects.create(name='Description',subject='{allottee_name}',body='{allotment_description}')
         from estate_app.email_drafts.service import generate
