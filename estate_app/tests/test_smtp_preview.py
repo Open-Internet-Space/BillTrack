@@ -148,3 +148,14 @@ class SMTPPreviewTests(TestCase):
         self.assertEqual(result['accepted'],1)
         self.assertEqual(wire.sendmail.call_args.args[1],['vendor@example.invalid','authority@example.invalid'])
         self.assertIn(b'Exact approved body',wire.sendmail.call_args.args[2])
+
+    def test_smtp_failure_keeps_reviewed_wording_on_screen(self):
+        from smtplib import SMTPAuthenticationError
+        data=self.prepared()[0];data['body']='My case-specific wording to retain'
+        payload={'action':'confirm_send','emails-TOTAL_FORMS':'1','emails-INITIAL_FORMS':'0','emails-MIN_NUM_FORMS':'1','emails-MAX_NUM_FORMS':'25',**{'emails-0-'+key:value for key,value in data.items()}}
+        with patch('estate_app.reminders.service.get_connection') as connection:
+            connection.return_value.open.side_effect=SMTPAuthenticationError(535,b'private')
+            response=self.client.post('/admin/email-reminders/',payload)
+        self.assertContains(response,'My case-specific wording to retain')
+        self.assertContains(response,'Your edits are kept here')
+        self.assertEqual(ReminderDelivery.objects.get().status,'failed')

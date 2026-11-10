@@ -74,7 +74,10 @@ def reminder_view(request):
                         preview_error=' '.join(error.messages)
                     else:
                         messages.info(request,f"Mail server accepted: {result['accepted']}. Failed: {result['failed']}. Needs review: {result['review']}. Skipped: {result['skipped']}.")
-                        return redirect('admin-email-reminders')
+                        if result['failed'] or result['review'] or result['skipped']:
+                            preview_error='Some messages need attention. Your edits are kept here; copy any wording you need and check delivery history before retrying or preparing a new preview.'
+                        else:
+                            return redirect('admin-email-reminders')
             elif action in ('send','mode'):
                 messages.error(request,'Reminder emails now require an editable preview and confirmation. Automatic sending is disabled.')
             elif action=='release' and request.POST.get('confirmed_not_sent')=='on':
