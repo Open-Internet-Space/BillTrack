@@ -3,5 +3,23 @@
 .error-message p { margin: 0 0 8px; }
 .error-dismiss, .login-panel button.error-dismiss, .login-panel button.error-dismiss:hover { width: auto; margin-left: 8px; padding: 4px 8px; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: 4px; cursor: pointer; box-shadow: none; transform: none; }
 .error-dismiss:focus-visible { outline: 2px solid #f0a500; outline-offset: 3px; }
-.login-panel .login-recovery { display: inline-block; margin-top: 18px; color: #fbbf24; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
-.login-panel .login-recovery:focus-visible { outline: 2px solid #fbbf24; outline-offset: 4px; }
+.login-panel .login-recovery {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px solid #39424d;
+  border-radius: 8px;
+  color: #fbbf24;
+  background: #0d1117;
+  font: 600 14px/1.5 var(--font-body);
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.login-panel .login-recovery:first-of-type { margin-top: 16px; }
+.login-panel .login-recovery:hover { border-color: #f0a500; background: #f0a5000d; }
+.login-panel .login-recovery:focus-visible { outline: 2px solid #fbbf24; outline-offset: 3px; }
