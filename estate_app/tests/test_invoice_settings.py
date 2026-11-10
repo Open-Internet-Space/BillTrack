@@ -87,6 +87,7 @@ class GlobalInvoiceSettingsTests(TestCase):
         with tempfile.TemporaryDirectory() as media, override_settings(MEDIA_ROOT=media):
             data = model_to_dict(self.settings, exclude=['updated_at', 'updated_by', 'letterhead_logo'])
             data['signing_authority'] = 'Officer\nDivision\nInstitute'
+            data['change_reason'] = 'Update signing authority and logo'
             data['letterhead_logo'] = SimpleUploadedFile('custom.png', image.getvalue(), content_type='image/png')
             response = self.client.post(f'/admin/estate_app/systemsettings/{self.settings.pk}/change/',
                                         data, HTTP_HOST='localhost')

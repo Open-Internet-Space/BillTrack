@@ -17,3 +17,4 @@ admin.site.password_change_template = 'admin/account_password_change.html'
 from ..reminders.admin import ReminderSettingsAdmin, ReminderDeliveryAdmin
 
 from ..email_drafts.admin import EmailTemplateAdmin
+from ..activity.admin import ActivityEntryAdmin

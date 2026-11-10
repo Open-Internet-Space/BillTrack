@@ -1916,6 +1916,84 @@
         "frontend/src/features/email-drafts/emailDrafts.test.jsx",
         "frontend/src/features/email-drafts/placeholderPicker.test.js"
       ]
+    },
+    {
+      "id": "activity-history",
+      "title": "Superuser corrections and protected activity history",
+      "parent": "admin",
+      "purpose": "Required correction reasons, signed cascade previews, immutable allowlisted SQLite audit snapshots and read-only Activity log. Payment mutation coordination and protected original reminder submissions retain financial/send evidence.",
+      "files": [
+        {
+          "path": "estate_app/activity/admin.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/api.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/context.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/database.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/deletion.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/middleware.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/activity/__init__.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/models/activity.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/migrations/0004_activity_history.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "estate_app/migrations/0005_protected_submissions.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "templates/admin/activity_delete.html",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "templates/admin/activity_inline_delete.html",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "scripts/verify_activity_migrations.py",
+          "role": "Transactional audit/correction workflow, migration or isolated verification."
+        },
+        {
+          "path": "compatibility/estate-management/migrations/0027_activity_history.py",
+          "role": "Equivalent schema operations for the historical migration chain only."
+        },
+        {
+          "path": "compatibility/estate-management/migrations/0028_protected_submissions.py",
+          "role": "Equivalent schema operations for the historical migration chain only."
+        },
+        {
+          "path": "estate_app/reminders/locking.py",
+          "role": "Cross-process active-sender lock; provider review cannot release a running SMTP attempt."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_activity.py",
+        "estate_app/tests/transaction_case.py"
+      ],
+      "settings": "Use existing Admin correction forms; SQLite schema migrations are required.",
+      "caution": "Preserve secret allowlists, immutable evidence, payment recalculation and independent reminder protection. Do not downgrade source alone."
     }
   ],
   "recipes": [
@@ -2013,6 +2091,18 @@
         "Edit named templates and default CC addresses in Admin before changing source.",
         "Use the email_drafts service for generated bill content and the frontend email-drafts feature for editing/copy behaviour.",
         "Run the feature tests and full suites; do not send real mail or change dispatch/reminder state."
+      ]
+    },
+    {
+      "title": "Investigate or correct a business record",
+      "components": [
+        "activity-history",
+        "admin"
+      ],
+      "steps": [
+        "Superusers use the existing model Admin with a written reason; review all related effects before confirming deletion.",
+        "Search Activity log by date, actor, type, action or safe snapshot text; deleted records retain history. Passwords, OTPs, tokens and SMTP credentials are excluded.",
+        "Use scripts/verify_activity_migrations.py on isolated databases for canonical and historical-chain upgrades. Do not replace either migration lineage or run a source-only production rollback."
       ]
     }
   ]

@@ -1,3 +1,4 @@
+from ..activity.admin import CorrectionAdminMixin
 import smtplib
 from django import forms
 from django.contrib import admin, messages
@@ -12,28 +13,33 @@ from django.views.decorators.http import require_http_methods
 from ..models.reminders import ReminderSettings, ReminderDelivery
 from ..admin_pagination import PaginationAdminMixin
 from .service import preview, send_reminders, send_test, smtp_fingerprint, mail_configured, safe_error
+from ..activity.admin import ReasonForm, apply_reason
+from ..models import ReminderSubmission
+from .service import save_submission
+from .locking import submission_lock
+from django.db import transaction
 
 @admin.register(ReminderSettings)
-class ReminderSettingsAdmin(PaginationAdminMixin,admin.ModelAdmin):
+class ReminderSettingsAdmin(CorrectionAdminMixin, PaginationAdminMixin,admin.ModelAdmin):
     fields=['automatic_enabled','updated_at']
     readonly_fields=['automatic_enabled','updated_at']
     def has_module_permission(self,request):return request.user.is_superuser
     def has_view_permission(self,request,obj=None):return request.user.is_superuser
     def has_change_permission(self,request,obj=None):return request.user.is_superuser
     def has_add_permission(self,request):return request.user.is_superuser and not ReminderSettings.objects.exists()
-    def has_delete_permission(self,request,obj=None):return False
+    def has_delete_permission(self,request,obj=None):return request.user.is_superuser
 
 @admin.register(ReminderDelivery)
-class ReminderDeliveryAdmin(PaginationAdminMixin,admin.ModelAdmin):
+class ReminderDeliveryAdmin(CorrectionAdminMixin, PaginationAdminMixin,admin.ModelAdmin):
     list_display=['send_date','allottee_name','recipient','status','attempts','error']
     list_filter=['status','send_date']
     search_fields=['allottee_name','recipient']
-    readonly_fields=[field.name for field in ReminderDelivery._meta.fields]
+    readonly_fields=['allottee_uuid','created_at','updated_at','attempts']
     def has_module_permission(self,request):return request.user.is_superuser
     def has_view_permission(self,request,obj=None):return request.user.is_superuser
     def has_add_permission(self,request):return False
-    def has_change_permission(self,request,obj=None):return False
-    def has_delete_permission(self,request,obj=None):return False
+    def has_change_permission(self,request,obj=None):return request.user.is_superuser
+    def has_delete_permission(self,request,obj=None):return request.user.is_superuser
 
 class TestMailForm(forms.Form):
     address=forms.EmailField(label='Your test mailbox')
@@ -81,10 +87,17 @@ def reminder_view(request):
             elif action in ('send','mode'):
                 messages.error(request,'Reminder emails now require an editable preview and confirmation. Automatic sending is disabled.')
             elif action=='release' and request.POST.get('confirmed_not_sent')=='on':
-                delivery_id=forms.IntegerField(min_value=1).clean(request.POST.get('delivery'))
-                count=ReminderDelivery.objects.filter(pk=delivery_id,status__in=['preparing','sending','review']).update(
-                    status='failed',error='Administrator checked provider activity and confirmed no message was sent.',
-                    reviewed_by=request.user.get_username(),updated_at=timezone.now())
+                reason_form=ReasonForm(request.POST)
+                if not reason_form.is_valid():
+                    raise ValidationError('Enter a written reason for releasing this submission.')
+                submission_id=forms.IntegerField(min_value=1).clean(request.POST.get('submission'))
+                with submission_lock(submission_id), transaction.atomic():
+                    apply_reason(reason_form.cleaned_data['change_reason'])
+                    count=ReminderSubmission.objects.filter(pk=submission_id,status__in=['preparing','sending','review']).update(
+                        status='failed',error='Administrator checked provider activity and confirmed no message was sent.',
+                        reviewed_by=request.user.get_username(),updated_at=timezone.now())
+                    if count:
+                        save_submission(ReminderSubmission.objects.get(pk=submission_id))
                 messages.info(request,'Review recorded; preview again before retrying.' if count else 'No uncertain delivery was changed.')
                 return redirect('admin-email-reminders')
             else:
@@ -101,5 +114,5 @@ def reminder_view(request):
        'configured':mail_configured(),'verified':bool(config.verified_config and config.verified_config==smtp_fingerprint()),
        'groups':groups,'skipped':skipped,'test_form':form,'template_form':template_form,
        'recent':ReminderDelivery.objects.all()[:30],
-       'uncertain':ReminderDelivery.objects.filter(status__in=['preparing','sending','review'])[:30]}
+       'uncertain':ReminderSubmission.objects.filter(status__in=['preparing','sending','review'])[:30]}
     return TemplateResponse(request,'admin/email_reminders.html',context)

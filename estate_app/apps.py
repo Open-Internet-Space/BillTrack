@@ -7,4 +7,5 @@ class EstateAppConfig(AppConfig):
     verbose_name = 'BillTrack'
 
     def ready(self):
+        from .activity import database  # noqa: F401
         from .account_security import signals  # noqa: F401

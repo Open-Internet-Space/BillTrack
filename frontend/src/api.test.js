@@ -80,8 +80,24 @@ test('failed report downloads do not claim a financial save or create a file', a
 });
 
 test('successful empty delete responses are accepted', async () => {
-  global.fetch.mockResolvedValue({ ok: true, status: 204 });
+  jest.spyOn(window, 'confirm').mockReturnValue(true);
+  jest.spyOn(window, 'prompt').mockReturnValue('Remove duplicate bill');
+  global.fetch.mockResolvedValueOnce({ok: true, status: 200, json: async () => ({affected: ['Delete bill #1', 'Delete payment #2'], confirmation: 'reviewed-token'})})
+    .mockResolvedValueOnce({ ok: true, status: 204 });
   await expect(API.delete('/bills/1/')).resolves.toBeNull();
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Delete payment #2'));
+  expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toEqual({change_reason: 'Remove duplicate bill', confirmation: 'reviewed-token'});
+  jest.restoreAllMocks();
+});
+
+test('corrections require a written reason before a network write', async () => {
+  jest.spyOn(window, 'prompt').mockReturnValueOnce('').mockReturnValueOnce('Correct spelling');
+  await expect(API.patch('/tenants/1/', {name: 'Corrected'})).rejects.toThrow('reason');
+  expect(global.fetch).not.toHaveBeenCalled();
+  global.fetch.mockResolvedValueOnce({ok: true, status: 200, json: async () => ({id: 1})});
+  await API.put('/tenants/1/', {name: 'Corrected'});
+  expect(JSON.parse(global.fetch.mock.calls[0][1].body).change_reason).toBe('Correct spelling');
+  jest.restoreAllMocks();
 });
 
 test('HTML downloads and JSON invoice bodies are not mistaken for documents', async () => {

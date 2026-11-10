@@ -1,6 +1,7 @@
 # Superuser corrections and activity history
 
-Status: proposed for approval; application implementation has not started.
+Status: approved on 10 November 2026 and implemented on the corrections/activity-history
+feature branch. Production deployment remains separate; see ACTIVITY-HISTORY.md.
 
 ## Intent and scope
 
@@ -67,10 +68,12 @@ Set actor/source/context after authentication, including DRF token
 authentication; Django middleware alone cannot identify a token-authenticated
 actor. Context is connection-bound, supports nesting and is cleared on errors
 and connection reuse. Derived changes inherit the initiating operation.
-Unauthenticated signup and scheduled operations use named system sources and
-fixed, specific workflow reasons, never a fabricated human actor. Unattributed
-writes are either rejected or explicitly classified as unmanaged; implementation
-must choose rejection for business writes and cover all existing workflows.
+Unauthenticated signup and scheduled operations use system sources and workflow
+reasons, never a fabricated human actor. Implementation decision: legacy trusted
+model/maintenance writes without context remain audited as unmanaged with a
+diagnostic reason, preserving existing bootstrap/security workflows. Interactive
+corrections and imports still require an explicit written reason. Custom trusted
+scripts need an operation context for specific actor/reason attribution.
 Bootstrap/data migrations use an explicit installation context. Avoid holding
 transactions across unrelated requests or external network calls.
 

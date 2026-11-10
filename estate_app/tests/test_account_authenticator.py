@@ -1,3 +1,4 @@
+from .transaction_case import ActivityTransactionTestCase
 import base64
 import hashlib
 import hmac
@@ -135,7 +136,7 @@ class AccountAuthenticatorTests(TestCase):
         self.assertTrue(self.user.check_password(self.password))
 
 
-class ConcurrentAuthenticatorTests(TransactionTestCase):
+class ConcurrentAuthenticatorTests(ActivityTransactionTestCase):
     def test_only_one_reset_can_use_a_personal_authenticator_code(self):
         import time
         from .test_email_accounts import ConcurrentEmailAccountTests

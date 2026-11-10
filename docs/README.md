@@ -1,5 +1,7 @@
 # BillTrack documentation
 
+Superuser corrections and retained before/after snapshots: [Activity log](ACTIVITY-HISTORY.md).
+
 This private clean repository is for fresh installations only. It has a new migration history and no institutional data or old Git history. Selected workflow updates have been deployed separately as a compatibility build that retains the existing installation's original database and migration chain. Do not apply this schema to an existing database.
 
 - [Private organisation configuration](PRIVATE-CONFIGURATION.md)

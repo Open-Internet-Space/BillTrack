@@ -1,3 +1,4 @@
+from ..activity.admin import CorrectionAdminMixin
 from django.contrib import admin
 from django.utils.html import format_html
 from ..models import Tenant
@@ -5,7 +6,12 @@ from ..admin_pagination import PaginationAdminMixin
 
 
 @admin.register(Tenant)
-class TenantAdmin(PaginationAdminMixin, admin.ModelAdmin):
+class TenantAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
+    def has_delete_permission(self, request, obj=None):
+        if not request.user.is_superuser and obj is not None and obj.bills.exists():
+            return False
+        return super().has_delete_permission(request, obj)
+
     list_display = ['allottee_label', 'uuid', 'type', 'contact', 'email', 'gstin', 'last_billed_month', 'receipt_payment_period', 'active_badge']
     exclude = ['due_days']
     readonly_fields = ['receipt_payment_period', 'last_billed_month']

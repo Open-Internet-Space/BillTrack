@@ -25,4 +25,8 @@ class AccountTokenAuthentication(TokenAuthentication):
         user, token = super().authenticate_credentials(key)
         if not permitted(user):
             raise AuthenticationFailed('Account is awaiting approval or disabled.')
+        from ..activity.context import current_operation
+        context = current_operation.get()
+        if context is not None:
+            context.update(actor_id=user.pk, actor_name=user.get_username(), source='api')
         return user, token

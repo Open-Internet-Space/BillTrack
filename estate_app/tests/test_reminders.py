@@ -134,7 +134,9 @@ class ReminderTests(TestCase):
   user=User.objects.create_superuser('release-admin','admin@example.invalid','test-password');self.client.force_login(user)
   self.client.post('/admin/email-reminders/',{'action':'release','delivery':log.pk})
   log.refresh_from_db();self.assertEqual(log.status,'review')
-  self.client.post('/admin/email-reminders/',{'action':'release','delivery':log.pk,'confirmed_not_sent':'on'})
+  from estate_app.models import ReminderSubmission
+  submission=ReminderSubmission.objects.get(delivery_id=log.pk)
+  self.client.post('/admin/email-reminders/',{'action':'release','submission':submission.pk,'confirmed_not_sent':'on','change_reason':'Provider confirms no submission'})
   log.refresh_from_db();self.assertEqual(log.status,'failed');self.assertEqual(log.reviewed_by,user.username)
  def test_changed_smtp_configuration_pauses_automatic_sending(self):
   ReminderSettings.objects.create(automatic_enabled=True,verified_config=smtp_fingerprint())
@@ -158,7 +160,7 @@ class ReminderTests(TestCase):
   with self.assertRaises(IntegrityError),transaction.atomic():
    ReminderDelivery.objects.create(**values)
 
-from django.test import TransactionTestCase
+from .transaction_case import ActivityTransactionTestCase
 from django.db import close_old_connections, OperationalError
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -167,7 +169,7 @@ from threading import Barrier
  EMAIL_HOST='smtp.gmail.com',EMAIL_PORT=587,EMAIL_USE_TLS=True,
  EMAIL_HOST_USER='sender@example.invalid',EMAIL_HOST_PASSWORD='test-only',
  DEFAULT_FROM_EMAIL='sender@example.invalid')
-class ConcurrentReminderTests(TransactionTestCase):
+class ConcurrentReminderTests(ActivityTransactionTestCase):
  def test_parallel_senders_cannot_submit_duplicate_mail(self):
   today=timezone.localdate()
   tenant=Tenant.objects.create(name='Parallel test',type='Shop',email='parallel@example.invalid',penalty_type='none',gst_applicable=False)

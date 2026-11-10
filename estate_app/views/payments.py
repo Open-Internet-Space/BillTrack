@@ -3,10 +3,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ..models import Payment, UserProfile
+from ..activity.api import AuditedViewSetMixin
 from ..serializers import PaymentSerializer
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('bill__tenant', 'recorded_by')
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
@@ -17,10 +18,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
         except UserProfile.DoesNotExist:
             role = 'staff'
 
-        if role != 'admin':
+        if role != 'admin' and not request.user.is_superuser:
             return Response({'error': 'Only admin can delete payment records'}, status=403)
 
-        bill = self.get_object().bill
-        response = super().destroy(request, *args, **kwargs)
-        bill.update_status()
-        return response
+        return super().destroy(request, *args, **kwargs)

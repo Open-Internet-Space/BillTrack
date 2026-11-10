@@ -1,3 +1,4 @@
+from ..activity.admin import CorrectionAdminMixin
 from django.contrib import admin
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -14,13 +15,13 @@ class UserProfileInline(admin.StackedInline):
     verbose_name_plural = 'Profile'
 
 
-class UserAdmin(PaginationAdminMixin, BaseUserAdmin):
+class UserAdmin(CorrectionAdminMixin, PaginationAdminMixin, BaseUserAdmin):
     change_user_password_template = 'admin/account_user_password_change.html'
     inlines = (UserProfileInline,)
     list_filter = (*BaseUserAdmin.list_filter, 'profile__role')
 
 
-class GroupAdmin(PaginationAdminMixin, BaseGroupAdmin):
+class GroupAdmin(CorrectionAdminMixin, PaginationAdminMixin, BaseGroupAdmin):
     pass
 
 

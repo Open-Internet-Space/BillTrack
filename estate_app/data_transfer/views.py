@@ -16,9 +16,13 @@ from .serialization import MAX_IMPORT_SIZE
 from .serialization import export_bytes
 from .restoration import restore_data
 from .serialization import validate_data
+from ..activity.admin import ReasonForm
+from ..activity.context import operation
+from ..activity.deletion import deletion_plan, confirmed
+from ..models import Tenant, SystemSettings
 
 
-class ImportForm(forms.Form):
+class ImportForm(ReasonForm):
     file = forms.FileField(label='BillTrack data export (.json)', widget=forms.FileInput(attrs={'accept': '.json'}))
     mode = forms.ChoiceField(label='Import mode', choices=[
         ('replace', '1. Replace all data and settings'), ('merge', '2. Merge into existing data'),
@@ -65,12 +69,16 @@ def export_view(request):
 def transfer_view(request):
     check_superuser(request)
     form = ImportForm(request.POST or None, request.FILES or None)
+    replacement_plan = deletion_plan([*Tenant.objects.all(), *SystemSettings.objects.all()])
     if request.method == 'POST' and form.is_valid():
         try:
             backup_id = uuid.uuid4()
             folder = Path(settings.BASE_DIR) / 'backups' / 'admin-imports'
             folder.mkdir(parents=True, exist_ok=True)
-            with transaction.atomic():
+            with operation(actor=request.user, source='import', reason=form.cleaned_data['change_reason']), transaction.atomic():
+                if form.cleaned_data['mode'] == 'replace' and not confirmed(request.POST.get('confirmation'),
+                        deletion_plan([*Tenant.objects.all(), *SystemSettings.objects.all()])):
+                    raise ValidationError('Review the current replacement effects, select the file again and confirm before replacing records.')
                 # Keep the safety export private, and finish writing it before any deletion.
                 with (folder / f'{backup_id}.json').open('xb') as stream:
                     stream.write(export_bytes())
@@ -86,6 +94,7 @@ def transfer_view(request):
     return TemplateResponse(request, 'admin/data_transfer.html', {
         **admin.site.each_context(request), 'title': 'Export / import data and settings', 'form': form,
         'backup_url': reverse('admin-data-transfer-backup', args=[backup_id]) if backup_id else None,
+        'replacement_plan': replacement_plan,
     })
 
 

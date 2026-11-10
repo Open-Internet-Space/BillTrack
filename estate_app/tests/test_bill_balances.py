@@ -258,7 +258,8 @@ class BillPreviousDuesTests(TestCase):
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.delete(f'/api/payments/{first.pk}/', HTTP_HOST='localhost')
+        confirmation = client.get(f'/api/payments/{first.pk}/deletion-preview/').data['confirmation']
+        response = client.delete(f'/api/payments/{first.pk}/', HTTP_HOST='localhost', HTTP_X_CHANGE_REASON='Correct settlement', HTTP_X_DELETION_CONFIRMATION=confirmation)
         bill.refresh_from_db()
 
         self.assertEqual(response.status_code, 204)
@@ -275,7 +276,7 @@ class BillPreviousDuesTests(TestCase):
         client = APIClient()
         client.force_authenticate(user=user)
 
-        response = client.patch(f'/api/payments/{payment.pk}/', {'bill': replacement.pk}, format='json', HTTP_HOST='localhost')
+        response = client.patch(f'/api/payments/{payment.pk}/', {'bill': replacement.pk, 'change_reason': 'Correct payment allocation'}, format='json', HTTP_HOST='localhost')
         original.refresh_from_db()
         replacement.refresh_from_db()
 
@@ -399,7 +400,8 @@ class BillPreviousDuesTests(TestCase):
             due_date=timezone.localdate() + datetime.timedelta(days=7),
         )
 
-        response = client.delete(f'/api/bills/{bill.id}/', HTTP_HOST='localhost')
+        confirmation = client.get(f'/api/bills/{bill.id}/deletion-preview/').data['confirmation']
+        response = client.delete(f'/api/bills/{bill.id}/', HTTP_HOST='localhost', HTTP_X_CHANGE_REASON='Remove duplicate bill', HTTP_X_DELETION_CONFIRMATION=confirmation)
 
         self.assertEqual(response.status_code, 204)
         self.assertFalse(Bill.objects.filter(pk=bill.pk).exists())

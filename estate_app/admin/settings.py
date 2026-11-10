@@ -1,3 +1,4 @@
+from ..activity.admin import CorrectionAdminMixin
 from django.contrib import admin
 from django import forms
 from django.db import models
@@ -7,7 +8,7 @@ from ..admin_pagination import PaginationAdminMixin
 
 
 @admin.register(SystemSettings)
-class SystemSettingsAdmin(PaginationAdminMixin, admin.ModelAdmin):
+class SystemSettingsAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
     readonly_fields = ['logo_preview', 'updated_at', 'updated_by']
     formfield_overrides = {models.ImageField: {'widget': forms.FileInput}}
     fieldsets = [
@@ -34,7 +35,7 @@ class SystemSettingsAdmin(PaginationAdminMixin, admin.ModelAdmin):
         return not SystemSettings.objects.exists()
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return request.user.is_superuser
 
     def save_model(self, request, obj, form, change):
         obj.updated_by = request.user

@@ -22,7 +22,7 @@ class Bill(models.Model):
     # Invoice Info - internal reference (Format: Month/Year/Autonumber)
     invoice_no  = models.CharField(max_length=100, unique=True, blank=True, null=True,
                                    help_text="Auto format: Month/Year/Autonumber, e.g. May/2026/001")
-    tenant      = models.ForeignKey(Tenant, on_delete=models.PROTECT, related_name='bills', verbose_name='Allottee')
+    tenant      = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='bills', verbose_name='Allottee')
     month       = models.PositiveSmallIntegerField(help_text="1=Jan, 2=Feb ... 12=Dec")
     year        = models.PositiveSmallIntegerField()
 

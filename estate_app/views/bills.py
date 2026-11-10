@@ -12,6 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ..models import Bill, Tenant
+from ..activity.api import AuditedViewSetMixin
 from ..serializers import BillListSerializer, BillSerializer
 
 
@@ -26,7 +27,7 @@ def bill_read_queryset():
     ).prefetch_related('payments')
 
 
-class BillViewSet(viewsets.ModelViewSet):
+class BillViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = Bill.objects.select_related('tenant', 'created_by')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]

@@ -34,7 +34,8 @@ Current configuration test: {% if verified %}accepted{% else %}not verified{% en
 </div>
 <div class="module"><h2>Uncertain / interrupted submissions</h2>
 <p>Do not retry until you check provider activity. A message may have been accepted even if BillTrack could not record success.</p>
-{% for row in uncertain %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="release"><input type="hidden" name="delivery" value="{{ row.pk }}">
+{% for row in uncertain %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="release"><input type="hidden" name="submission" value="{{ row.pk }}">
+<p><label>Reason for releasing this protected submission <textarea name="change_reason" required maxlength="2000" rows="2"></textarea></label></p>
 <p>{{ row.send_date }} — {{ row.allottee_name }} — {{ row.recipient }} — {{ row.get_status_display }}</p>
 <label><input type="checkbox" name="confirmed_not_sent" required> I checked provider activity and confirm this email was not sent.</label>
 <button type="submit">Record review and allow retry</button></form>{% empty %}<p>No uncertain submissions.</p>{% endfor %}
