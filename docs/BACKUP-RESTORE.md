@@ -1,9 +1,63 @@
-# Private backups and restoration
+# Backups and recovery
 
-scripts/backup.py and the installation-relative backup.bat configure an existing private destination, create an online SQLite/data backup and verify its archive. They do not automatically delete old folders. Legacy fixed-path/full-copy scripts are intentionally omitted. For full recovery also retain the matching source revision and either the matching frontend/static build or a reproducible rebuild procedure. Monitor space and test restoration separately.
+A backup is a private copy you can use if records or files are lost. Back up the installation whose data you need: a backup of `E:\BillTrack-Clean` does not protect the real office records in `E:\EstateManagement`.
 
-Full backups include private database, media, configuration, account secrets and recovery history. Business JSON export includes organisation details and may include the logo. Neither belongs in GitHub. Do not restore an older ledger just to undo source changes, and do not restore a backup over a running server.
+## What needs protecting?
 
-Preserve current data/credentials/uploads during code rollback and use version-matched instructions. prepare_account_rollback --apply quarantines signup-created accounts before returning to code without approval enforcement. The clean 0001_initial migration and its successors are not an upgrade path for a historical installation. Compatibility updates must retain that installation's original migration chain. Plan a full transition separately.
+| Item | Why it matters |
+| --- | --- |
+| Database | Bills, payments, accounts, organisation details and saved email templates |
+| Uploaded files | Logos and other private uploads |
+| `.env` and local configuration | Keys, email credentials, connection settings and backup destination |
+| Matching application version and browser files | Needed to run or rebuild the application that understands the saved database |
+| Startup-task settings | Needed to restart the correct office installation after recovery |
 
-Reusable email templates are preserved by full database backups. Business JSON exports omit templates; default CC addresses are included in System Settings. Merged allottee emails are temporary and are not saved. See [email drafts](EMAIL-DRAFTS.md).
+The standard `scripts/backup.py` tool saves the database, `.env` and supported local data/asset folders. It checks database integrity and the ZIP archive. It does **not** save the whole source repository, Python environment, every generated browser file or Windows task. Keep the matching source version and browser build, or tested rebuild instructions, separately in the private recovery package.
+
+## Set up a backup destination for a new copy
+
+For a new Windows installation, create a private destination folder on a protected drive, preferably separate from the application drive. In PowerShell opened in that new installation's folder, run the following, replacing the example path with your real destination:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/backup.py --configure --destination 'D:\BillTrackBackups'
+```
+
+The destination must already exist and be writable. This saves the destination in `instance/backup.json`; it does not set up an automatic schedule. On Linux, use `.venv/bin/python` and an absolute Linux destination path.
+
+The existing office installation may already have a configured backup task and Python environment. Check its private operating instructions before changing either. These new-copy commands are not instructions to reconfigure the live office backup.
+
+## Make and check a backup
+
+From the configured new installation's folder:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/backup.py
+```
+
+A successful run prints `Backup verified and completed:` followed by the ZIP path. A failure prints `BACKUP FAILED:`; do not treat that as a completed backup. The installation's `backup.bat` is another entry point to the same backup tool.
+
+The tool can take a database backup while the application is running. For a coordinated pre-update recovery package, ask users to stop editing and follow the maintenance plan so uploaded files and other saved files remain consistent too.
+
+Keep a protected copy away from the application drive, check available space and arrange an automatic schedule with the administrator if needed. The tool does not delete old backups automatically.
+
+## Test recovery before you need it
+
+An archive check cannot prove that you can restore the whole application. Ask the developer or administrator to rehearse recovery in a separate, protected folder using the matching application version. Confirm that login, saved records, uploaded files and required outputs work. Keep private rehearsal data outside the source repository and do not send reminder emails during the test.
+
+Do not test recovery over the running office application.
+
+## If an update fails
+
+Use the private recovery steps prepared for that exact update. Returning to earlier code is called a **rollback**. It normally needs to preserve the current database, uploads and private settings.
+
+**Do not restore an old database just to undo code changes.** That can erase bills, payments or account changes entered after the backup. Never restore files over a running server.
+
+The office installation and clean source have different database migration histories. Do not replace the office database or its migrations with the clean `0001_initial` schema. A full move between those histories requires a separate tested plan.
+
+Older code can also have different account-security behaviour. If returning to code without signup approval, a developer must review the documented `prepare_account_rollback --apply` step, which quarantines signup-created accounts. Do not run it as a routine backup command.
+
+## Backups and business exports are different
+
+A business JSON export is for transferring supported business data; it is not a complete application backup. Saved email templates are included in full database backups but omitted from business JSON exports. Default CC addresses are part of exported System Settings. Merged draft emails are temporary and are not saved. See [Data export/import](ADMIN-DATA-TRANSFER.md) and [Email drafts](EMAIL-DRAFTS.md).
+
+Full backups contain private records, configuration and account secrets. They are not encrypted by the backup tool. Restrict access, protect offsite copies and never put backups or exports on GitHub.

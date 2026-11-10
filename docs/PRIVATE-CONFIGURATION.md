@@ -1,13 +1,38 @@
-# Private organisation configuration
+# Organisation details and private settings
 
-Organisation name, department, address, signing authority, supplier GSTIN, place of supply, bank/payee details, reference format, invoice wording and copy recipients are edited in Admin → System Settings. They are saved in the local ignored SQLite database. Uploaded logos are stored in ignored media/invoice-branding. They are not written into tracked code, environment templates or GitHub settings.
+Each copy of BillTrack has its own settings. Changing the development copy does not change the office copy. See [Setup and updates](SETUP.md) if you are unsure which one you have open.
 
-The organisation profile starts blank. Configure the organisation name before printing; requests without it show a setup message. Configure tax and payment details for your own operation. Calculation rules and numeric rate defaults are unchanged; saved local rates control billing. Names, addresses and institution marks are never supplied by a real-organisation fallback. Missing logos use a generic BillTrack image.
+## Change the organisation name, logo or invoice details
 
-.env holds runtime keys, SMTP credentials and optional local network addresses. It is not a second source for organisation settings. Keep it private. .env.example contains empty/placeholder installation values only.
+1. Open the correct application's browser address and sign in as an administrator.
+2. Open **Admin → System Settings**.
+3. Enter the organisation name, department, address and signing authority.
+4. Check the tax registration, place of supply, bank/payee details, reference format, invoice wording and copy recipients that your office needs.
+5. Upload the organisation's logo, save the settings and preview an invoice.
 
-Exports and full backups intentionally include private organisation/configuration data and logos. Keep them outside Git, share only with authorised recipients, and test restoration. Ignore rules and release checks reduce accidental uploads; they cannot prevent someone deliberately publishing private files or forcing them into Git.
+A new installation starts with a blank organisation profile. You must enter an organisation name before printing. If no logo is uploaded, BillTrack uses a generic image. Check saved billing rates for your own operation; changing branding does not change the application's calculation rules.
 
-The database and backups are not encrypted by these changes. Use operating-system access controls and an appropriate private backup destination.
+These details are stored in this copy's `db.sqlite3` database. Logos are stored under `media/invoice-branding`. Saving them does not edit source code or GitHub settings.
 
-For SMTP changes, edit the .env beside the running installation's manage.py and restart that server; another development checkout has its own .env. DEFAULT_FROM_EMAIL must include a complete mailbox address, optionally preceded by a display name. See [SMTP reminder setup and preview](EMAIL-REMINDERS.md).
+## What the .env file is for
+
+`.env` is a private text file beside `manage.py`. It holds the installation's secret key, email login details and optional network addresses. It may be hidden in File Explorer.
+
+It is not where you enter the organisation's name or invoice wording. Those belong in **System Settings**. `.env.example` is only a blank/example starting point; it must not contain working credentials.
+
+Do not upload `.env` to GitHub, paste it into chat or replace it with another copy's file during an update. Keep the live installation's existing keys unless you are following a specific, reviewed key-change procedure.
+
+## Change outgoing email settings
+
+1. Identify the copy that actually sends the mail. For office mail, that is the live installation at `E:\EstateManagement`.
+2. Have the administrator edit the `.env` beside that installation's `manage.py`.
+3. Use the mail provider's required connection settings and credentials. Where required, use an app password rather than the normal account password.
+4. Set `DEFAULT_FROM_EMAIL` to a complete email address, optionally with a display name, such as `Billing <billing@example.com>`.
+5. Save the file and restart that installation using its existing startup task. Changes in the development `.env` do not affect the office server.
+6. Follow [Email reminder setup and preview](EMAIL-REMINDERS.md) to check settings and review messages before sending.
+
+## Protect saved settings and backups
+
+Business exports include private organisation details and may include the logo. Full backups also include account secrets and `.env`. Share them only with authorised people and store them outside GitHub.
+
+The database and backup ZIP files are not encrypted by BillTrack. Use restricted folder access and a protected backup destination. Git ignore rules reduce accidental uploads, but they do not make private files safe to publish manually.

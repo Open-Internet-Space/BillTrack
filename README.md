@@ -2,28 +2,37 @@
 
 Every bill. Every payment. In view.
 
-An [Open Internet](https://www.anopeninternet.eu.org/) Project, developed independently as a personal project for configurable billing and estate-management workflows.
+An [Open Internet](https://www.anopeninternet.eu.org/) Project, developed independently as a personal project for billing and estate management.
 
-This private clean source repository is for **fresh installations only**. It contains no organisation profile, private logo or previous installation history. Do not apply its new initial schema to an existing database.
+## Which folder is for what?
+
+| Folder | What it is for |
+| --- | --- |
+| `E:\BillTrack-Clean` | The main source repository: make and test all new changes here. This is the version published to GitHub. |
+| `E:\EstateManagement` | The live application the office uses every day. It holds the real records, uploads and private settings. Install tested updates here; do development in the source repository. |
+
+The normal order is: **make a change → test it → publish the source to GitHub → install a compatible update in the office application**. Uploading code to GitHub does not update the office application automatically.
+
+**Important:** the two copies have different database histories. Copying the whole source folder over the live folder can break the office application or overwrite private files. Follow the [setup and update guide](docs/SETUP.md).
 
 ## Start here
 
-[Documentation index](docs/README.md) · [Windows setup](docs/SETUP-WINDOWS.md) · [Linux setup](docs/SETUP-LINUX.md) · [Private configuration](docs/PRIVATE-CONFIGURATION.md)
+- [Understand the two folders and choose the right instructions](docs/SETUP.md).
+- [Set up a new Windows copy](docs/SETUP-WINDOWS.md) or [a new Linux copy](docs/SETUP-LINUX.md).
+- [Use or update the existing office application](docs/PRODUCTION-WINDOWS.md).
+- [Set your organisation details and private settings](docs/PRIVATE-CONFIGURATION.md).
+- [Find all user and technical guides](docs/README.md).
 
-Configure organisation name, address, signing authority, GST registration, bank/payee details and invoice wording in **Admin → System Settings**. Values stay in local ignored SQLite; logos stay in private media. No .env organisation override or tracked configuration file is written. Printing requires an organisation name. Runtime keys and SMTP settings belong only in private .env.
+## What BillTrack does
 
-Features include allottees, single/bulk/consolidated invoices, receipts, principal/penalty payments, reports, private export/import/backups, approved signup, email OTP/personal TOTP recovery, special superuser emergency recovery, SMTP reminders with mandatory editable previews and a searchable modification map.
+BillTrack manages allottees, bills, receipts, payments, penalties and reports. It prints individual, bulk and consolidated invoices. It also includes account approval and recovery, private data export/import, backups and email tools.
 
-Use [the feature-to-file guide](docs/COMPONENT-MAP.md) to modify components. See [security](SECURITY.md) and [private-repository preparation](docs/PUBLICATION-REVIEW.md). Dependency updates and public internet hosting need separate review. No default account or business dataset is supplied.
-
-Selected features have also been deployed to the existing daily application through a separately validated compatibility build. That deployment preserves its original database/migration history and startup configuration; this clean source remains fresh-install only. Version-matched recovery files stay in private deployment backups. No release or tag is created. Keep downloaded exports, backups and generated documents outside Git.
-
-Manual vendor correspondence: [merge saved templates and copy temporary email drafts](docs/EMAIL-DRAFTS.md). No mail is sent by the draft workflow.
+A new installation starts without business records or a default account. Enter your organisation details in **Admin → System Settings** before printing. Uploaded logos and saved details belong to that installation; they are not part of the source published to GitHub.
 
 ## Email workflows
 
-- [Manual email drafts](docs/EMAIL-DRAFTS.md): choose a saved template, merge an allottee's details, edit and copy into your mailbox. Draft emails are temporary.
-- [SMTP reminders](docs/EMAIL-REMINDERS.md): select a template and eligible allottees, open **Preview selected emails**, review/edit To, CC, Subject and Body, then **Confirm and send**. Automatic/direct sending is disabled.
-- [Allotment descriptions](docs/LISTS-AND-FILTERS.md#distinguishing-multiple-allotments): optional descriptions distinguish separate allotments belonging to the same person.
+- [Manual email drafts](docs/EMAIL-DRAFTS.md): choose a saved template, fill in an allottee's details, edit the draft and copy it into your mailbox. This does not send mail.
+- [SMTP reminders](docs/EMAIL-REMINDERS.md): choose a template and allottees, open **Preview selected emails**, check the recipients and message, then **Confirm and send**. Automatic sending is disabled.
+- [Allotment descriptions](docs/LISTS-AND-FILTERS.md#distinguishing-multiple-allotments): distinguish separate allotments belonging to the same person.
 
-Admin template editing includes a labelled placeholder picker. The sign-in page offers separately spaced, touch-friendly signup and recovery links. See the [modification map](docs/COMPONENT-MAP.md) for the related code blocks.
+Developers can use the [feature-to-file guide](docs/COMPONENT-MAP.md) to find code. Read [development checks](docs/DEVELOPMENT.md), [security](SECURITY.md) and [publication guidance](docs/PUBLICATION-REVIEW.md) before sharing changes. Keep databases, passwords, uploads, exports and backups outside GitHub. Publishing source does not make the application safe to host on the public internet.

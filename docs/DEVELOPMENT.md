@@ -1,21 +1,80 @@
-# Development and verification
+# Development and testing
 
-Use an isolated environment, synthetic accounts and a separate database/media/port. Never run write tests against a daily installation. Install pinned dependencies and frontend packages, create a private test .env, then run Django tests, helper unittest discovery, frontend tests/build, migration drift and component-map checks.
+All new development happens in **`E:\BillTrack-Clean`**, the main source repository published to GitHub. **`E:\EstateManagement` is the live office installation.** Develop and test outside it; deploy tested, compatible changes into it.
 
-```sh
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python manage.py test estate_app
-python -m unittest discover -s scripts -p "test_*.py"
-python scripts/build_component_map.py --check
+For an explanation of these roles, see [Setup and updates](SETUP.md). For first-time Python and browser setup, see [Windows setup](SETUP-WINDOWS.md) or [Linux setup](SETUP-LINUX.md).
+
+## 1. Keep testing separate from office work
+
+Use the development copy's own Python environment, `.env`, database, uploads and output folders. Use made-up accounts and records. Never run tests that write data against the office installation, and never use real mailboxes for automated mail tests.
+
+On the same computer as the live server, use port 8001 for a temporary test server and leave the office port 8000 alone. The setup guides explain the corresponding private origin setting.
+
+Use [the component map](COMPONENT-MAP.md) to find the files for the feature you are changing. Reuse the application's existing patterns.
+
+## 2. Run the Python checks
+
+From `E:\BillTrack-Clean` in PowerShell, after setting up the separate environment:
+
+```powershell
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+.\.venv\Scripts\python.exe manage.py test estate_app
+.\.venv\Scripts\python.exe -m unittest discover -s scripts -p 'test_*.py'
+.\.venv\Scripts\python.exe scripts/build_component_map.py --check
 ```
 
-In frontend run npm test -- --watchAll=false --runInBand and build with BUILD_PATH=../frontend_build, then collect static files. Windows npm wrappers may require direct Node invocation of react-scripts when an installation path contains shell-special characters. Keep artifacts, databases, exports and logs ignored.
+On Linux, replace `.\.venv\Scripts\python.exe` with `.venv/bin/python`.
 
-Organisation settings have one authority: local SystemSettings plus private media. Do not add institution-specific defaults to code, examples, fixtures, migrations or assets. .env.example must contain no working credential. After changing structure, update docs/component-map.json and regenerate both guides. Scan the entire new history and staged tree for secrets/private identifiers before publication; review synthetic scanner findings precisely rather than ignoring test directories.
+| Check | What it tells you |
+| --- | --- |
+| `check` | Whether Django finds basic configuration problems |
+| `makemigrations --check --dry-run` | Whether model changes are missing database migration files |
+| `test estate_app` | Whether application tests pass using a separate test database |
+| `unittest discover` | Whether helper-script tests pass |
+| `build_component_map.py --check` | Whether generated code guides match their source registry |
 
-This repository starts with a fresh schema, not inherited migration records. Do not connect it to an existing installation's database without a separate migration plan. No public hosting, visibility change or release is part of this preparation.
+Keep the `estate_app` test label: a broad test search can pick up old generated scripts in ignored output folders. Stop and fix failures before preparing a deployment.
 
-Manual template merging uses the additive 0002_email_templates migration in the clean-source lineage. Reusable templates are local database records; merged emails are temporary; generic seed wording contains no institutional data. Test generation without SMTP and keep snapshots/credentials outside Git. See [email draft behaviour and API](EMAIL-DRAFTS.md).
+## 3. Check the browser application
 
-Use the maintained estate_app test label so old generated test scripts in ignored output folders are not discovered. SMTP preview tests use local-memory/fake SMTP backends, never live mailboxes. Deploying selected updates into a historical installation requires its compatible migration chain and private rollback package; never replace its database with the clean initial schema.
+From the development root in PowerShell:
+
+```powershell
+Set-Location frontend
+npm ci
+npm test -- --watchAll=false --runInBand
+$env:BUILD_PATH = '../frontend_build'
+npm run build
+Remove-Item Env:BUILD_PATH
+Set-Location ..
+.\.venv\Scripts\python.exe manage.py collectstatic --noinput
+```
+
+The tests check the browser code; the build produces the files used by the running application. On Linux, use `BUILD_PATH=../frontend_build npm run build` instead of the PowerShell environment-variable steps.
+
+If Windows npm wrappers fail because an installation path contains special characters, use a direct Node invocation of the installed `react-scripts` entry point. Do not change the office folder to work around a development-path error.
+
+Manually check affected screens and outputs using made-up records. For email previews use fake or local-memory mail backends; do not send real mail from automated tests.
+
+## 4. Keep organisation information out of source
+
+Organisation details belong in **Admin → System Settings** and private uploaded media. Do not add real names, bank details, logos, credentials or real records to source, examples, test fixtures or migration files. `.env.example` must contain placeholders only.
+
+Keep generated documents, databases, backups and logs ignored by Git. Before publishing, review selected changes and scan source/history for secrets and private identifiers. Review individual synthetic test findings rather than excluding whole test folders. See [publication guidance](PUBLICATION-REVIEW.md).
+
+If code structure changes, update `docs/component-map.json`, then run:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/build_component_map.py
+```
+
+This regenerates both feature-to-file guides. Run its `--check` command again afterward.
+
+## 5. Prepare the office update separately
+
+The clean repository starts with a fresh database structure. Its migration `0002_email_templates` and later migrations belong to that clean history; they do not replace the office installation's older history.
+
+Never connect the clean initial schema to the live database or copy the development database into the office folder. Prepare a compatible update with the live migration chain and a private recovery package. Follow [Installing an update in the office](PRODUCTION-WINDOWS.md#installing-an-update-in-the-office).
+
+Reusable email templates are saved in each installation's database; merged drafts are temporary. Test draft generation without sending mail. See [Email drafts](EMAIL-DRAFTS.md).
