@@ -1,0 +1,6 @@
+.reminder-preview { max-width:1000px; }
+.reminder-preview .form-row { display:grid; gap:8px; padding:16px; }
+.reminder-preview .form-row label { float:none; width:auto; }
+.reminder-preview .form-row input,.reminder-preview textarea { width:100%; box-sizing:border-box; max-width:100%; font:inherit; }
+.reminder-preview textarea { min-height:240px; line-height:1.5; resize:vertical; }
+.reminder-preview .submit-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }

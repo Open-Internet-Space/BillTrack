@@ -9,6 +9,16 @@ from estate_app.models import Bill, Tenant, Payment
 from estate_app.models.reminders import ReminderSettings, ReminderDelivery
 from estate_app.reminders.service import cutoff_date, milestone, preview, send_reminders, send_test, smtp_fingerprint
 
+
+def send_reviewed(today):
+ from estate_app.models import EmailTemplate
+ from estate_app.reminders.composition import prepare_messages
+ groups=preview(today)[0]
+ if not groups:return {'accepted':0,'failed':0,'review':0,'skipped':0}
+ template,_=EmailTemplate.objects.get_or_create(name='Reviewed reminder test',defaults={'subject':'Payment reminder','body':'{bill_details}'})
+ prepared=prepare_messages({group['uuid'] for group in groups},template,1,today)
+ return send_reminders(today=today,confirmed=prepared,user_id=1)
+
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
  EMAIL_HOST='smtp.gmail.com',EMAIL_PORT=587,EMAIL_USE_TLS=True,
  EMAIL_HOST_USER='sender@example.invalid',EMAIL_HOST_PASSWORD='test-only',
@@ -34,11 +44,11 @@ class ReminderTests(TestCase):
   self.assertEqual(ReminderDelivery.objects.count(),0)
  def test_combines_bills_and_repeated_send_is_suppressed(self):
   Bill.objects.create(tenant=self.tenant,month=2,year=2026,rent=80,issue_date=self.today-dt.timedelta(days=6))
-  self.assertEqual(send_reminders(today=self.today)['accepted'],1)
+  self.assertEqual(send_reviewed(self.today)['accepted'],1)
   self.assertEqual(len(mail.outbox),1);self.assertEqual(len(ReminderDelivery.objects.get().items),2)
   self.assertIn('100.00',mail.outbox[0].body)
-  self.assertEqual(send_reminders(today=self.today)['accepted'],0)
-  self.assertEqual(send_reminders(today=self.today+dt.timedelta(days=1))['accepted'],0)
+  self.assertEqual(send_reviewed(self.today)['accepted'],0)
+  self.assertEqual(send_reviewed(self.today+dt.timedelta(days=1))['accepted'],0)
  def test_paid_bill_stops_sending(self):
   Payment.objects.create(bill=self.bill,amount=100,payment_date=self.today)
   self.assertEqual(preview(self.today)[0],[])
@@ -57,33 +67,33 @@ class ReminderTests(TestCase):
  def test_rechecks_payment_after_preview(self):
   preview(self.today)
   Payment.objects.create(bill=self.bill,amount=100,payment_date=self.today)
-  self.assertEqual(send_reminders(today=self.today)['accepted'],0)
+  self.assertEqual(send_reviewed(self.today)['accepted'],0)
  def test_automatic_is_off_by_default(self):
   self.assertEqual(send_reminders(today=self.today,automatic=True)['accepted'],0)
   self.assertEqual(ReminderDelivery.objects.count(),0)
- def test_automatic_requires_verified_current_configuration(self):
+ def test_automatic_is_disabled_even_with_verified_current_configuration(self):
   ReminderSettings.objects.create(automatic_enabled=True)
   self.assertEqual(send_reminders(today=self.today,automatic=True)['accepted'],0)
   config=ReminderSettings.objects.get();config.verified_config=smtp_fingerprint();config.save()
-  self.assertEqual(send_reminders(today=self.today,automatic=True)['accepted'],1)
+  self.assertEqual(send_reminders(today=self.today,automatic=True)['accepted'],0)
  def test_definite_connection_failure_is_retryable(self):
   with patch('estate_app.reminders.service.get_connection') as connection:
    connection.return_value.open.side_effect=SMTPAuthenticationError(535,b'private mail server response')
-   self.assertEqual(send_reminders(today=self.today)['failed'],1)
+   self.assertEqual(send_reviewed(self.today)['failed'],1)
   log=ReminderDelivery.objects.get();self.assertEqual(log.status,'failed')
   self.assertNotIn('private',log.error)
-  self.assertEqual(send_reminders(today=self.today)['accepted'],1)
+  self.assertEqual(send_reviewed(self.today)['accepted'],1)
   self.assertEqual(ReminderDelivery.objects.get().attempts,2)
  def test_uncertain_submission_is_not_retried(self):
   with patch('estate_app.reminders.service.EmailMessage.send',side_effect=SMTPServerDisconnected('private detail')):
-   self.assertEqual(send_reminders(today=self.today)['review'],1)
+   self.assertEqual(send_reviewed(self.today)['review'],1)
   self.assertEqual(ReminderDelivery.objects.get().status,'review')
-  self.assertEqual(send_reminders(today=self.today+dt.timedelta(days=1))['accepted'],0)
+  self.assertEqual(send_reviewed(self.today+dt.timedelta(days=1))['accepted'],0)
  def test_interrupted_claim_blocks_duplicate(self):
   group=preview(self.today)[0][0]
   ReminderDelivery.objects.create(allottee_uuid=self.tenant.uuid,allottee=self.tenant,allottee_name=self.tenant.name,send_date=self.today,recipient=self.tenant.email,status='sending',items=group['items'])
-  self.assertEqual(send_reminders(today=self.today)['accepted'],0)
-  self.assertEqual(send_reminders(today=self.today+dt.timedelta(days=1))['accepted'],0)
+  self.assertEqual(send_reviewed(self.today)['accepted'],0)
+  self.assertEqual(send_reviewed(self.today+dt.timedelta(days=1))['accepted'],0)
  def test_test_message_verifies_configuration_without_billing_history(self):
   send_test('office@example.invalid')
   self.assertEqual(ReminderSettings.objects.get().verified_config,smtp_fingerprint())
@@ -132,12 +142,12 @@ class ReminderTests(TestCase):
    result=send_reminders(today=self.today,automatic=True)
   self.assertIn('error',result);self.assertEqual(ReminderDelivery.objects.count(),0)
  def test_receipt_change_does_not_trigger_second_email_same_day(self):
-  send_reminders(today=self.today)
+  send_reviewed(self.today)
   self.bill.issue_date+=dt.timedelta(days=1);self.bill.save()
-  self.assertEqual(send_reminders(today=self.today)['accepted'],0)
+  self.assertEqual(send_reviewed(self.today)['accepted'],0)
  def test_unknown_backend_result_is_held_for_review(self):
   with patch('estate_app.reminders.service.EmailMessage.send',return_value=0):
-   self.assertEqual(send_reminders(today=self.today)['review'],1)
+   self.assertEqual(send_reviewed(self.today)['review'],1)
  def test_unauthenticated_admin_does_not_expose_preview(self):
   response=self.client.get('/admin/email-reminders/')
   self.assertEqual(response.status_code,302);self.assertIn('/admin/login/',response.url)
@@ -163,13 +173,18 @@ class ConcurrentReminderTests(TransactionTestCase):
   tenant=Tenant.objects.create(name='Parallel test',type='Shop',email='parallel@example.invalid',penalty_type='none',gst_applicable=False)
   Bill.objects.create(tenant=tenant,month=1,year=2026,rent=100,issue_date=today-dt.timedelta(days=20))
   mail.get_connection();mail.outbox=[]
+  from estate_app.models import EmailTemplate
+  from estate_app.reminders.composition import prepare_messages
+  from django.core.exceptions import ValidationError
+  template=EmailTemplate.objects.create(name='Concurrent preview',subject='Reminder',body='{bill_details}')
+  prepared=prepare_messages({str(tenant.uuid)},template,1,today)
   barrier=Barrier(2)
   def attempt():
    close_old_connections()
    try:
     barrier.wait(timeout=10)
-    return send_reminders(today=today)
-   except OperationalError:
+    return send_reminders(today=today,confirmed=prepared,user_id=1)
+   except (OperationalError,ValidationError):
     return {'database_busy':True}
    finally:close_old_connections()
   with ThreadPoolExecutor(max_workers=2) as pool:
@@ -178,4 +193,4 @@ class ConcurrentReminderTests(TransactionTestCase):
   self.assertEqual(ReminderDelivery.objects.count(),1)
   log=ReminderDelivery.objects.get()
   if log.status in ('preparing','sending','review','accepted'):
-   self.assertEqual(send_reminders(today=today)['accepted'],0)
+   self.assertEqual(send_reviewed(today)['accepted'],0)

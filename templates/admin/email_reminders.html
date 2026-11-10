@@ -6,13 +6,9 @@
 <p>SMTP: {% if configured %}Configured{% else %}<strong>Not configured — add the sender and app password to the private .env.</strong>{% endif %}.
 Current configuration test: {% if verified %}accepted{% else %}not verified{% endif %}.</p>
 <div class="module">
-<h2>Sending mode</h2>
-<form method="post">{% csrf_token %}
-<input type="hidden" name="action" value="mode">
-<label><input type="checkbox" name="automatic_enabled" {% if config.automatic_enabled %}checked{% endif %}> Automatic daily sending at 9:30 AM India time</label>
-<p>The Windows mail task must be installed. Manual mode is the default. The PC must be awake and online; missed runs send only the latest applicable reminder.</p>
-<button type="submit">Save sending mode</button>
-</form>
+<h2>Manual preview and confirmation</h2>
+<p>Every reminder must be previewed and confirmed here. Automatic sending is disabled. Existing scheduled mail tasks send nothing.</p>
+<p><a href="{% url 'admin:estate_app_emailtemplate_changelist' %}" target="_blank" rel="noopener">Edit saved email templates and insert placeholders</a>.</p>
 </div>
 <div class="module">
 <h2>Test your mailbox first</h2>
@@ -21,17 +17,18 @@ Current configuration test: {% if verified %}accepted{% else %}not verified{% en
 </div>
 <div class="module">
 <h2>Current preview</h2>
-<form method="post">{% csrf_token %}<input type="hidden" name="action" value="send">
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="prepare">
+{{ template_form.as_p }}
 {% for group in groups %}
 <fieldset class="module">
-<h3><label><input type="checkbox" name="allottee" value="{{ group.uuid }}"> {{ group.allottee.name }} — {{ group.email }}</label></h3>
+<h3><label><input type="checkbox" name="allottee" value="{{ group.uuid }}"> {{ group.allottee.display_name }} — {{ group.email }}</label></h3>
 <table><caption>Eligible outstanding bills</caption><thead><tr><th>Period / reference</th><th>Due date</th><th>Scheduled reminder</th><th>Principal</th><th>Penalty</th><th>Total (INR)</th></tr></thead>
 <tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
 <p>Combined total: INR {{ group.total|floatformat:2 }}</p>
 </fieldset>
 {% empty %}<p>No reminders are currently eligible.</p>{% endfor %}
-{% if groups %}<p>Only selected allottees will receive mail. Sending rechecks balances; there are no invoice attachments or external login links.</p>
-<button type="submit">Send reminders to selected allottees</button>{% endif %}
+{% if groups %}<p>Only selected allottees will receive mail. The next page shows editable To, CC, subject and body before anything is sent. Sending rechecks the reviewed balances.</p>
+<button type="submit">Preview selected emails</button>{% endif %}
 </form>
 <h3>Skipped bills</h3><ul>{% for reason,count in skipped.items %}<li>{{ reason }}: {{ count }}</li>{% empty %}<li>None</li>{% endfor %}</ul>
 </div>

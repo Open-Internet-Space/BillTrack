@@ -45,3 +45,5 @@ Full SQLite backups preserve saved templates and default CC addresses. Business-
 This change adds schema migration 0002_email_templates to the clean BillTrack lineage. It is not a migration from the historical EstateManagement database. Development does not alter the daily installation.
 
 The [component map](COMPONENT-MAP.md#email-drafts) lists exact source files. `/api/email-templates/` reads active templates; `/api/email-drafts/generate/` accepts allottee_id, bill_ids and template_id and returns a temporary merged email with no-store caching. Only approved authenticated users have access. There is no API for saving allottee emails or sending mail.
+
+The same saved templates can be selected in [Admin SMTP reminders](EMAIL-REMINDERS.md), which has a separate editable preview and Confirm and send action. The Email Drafts workspace itself remains manual copying only.

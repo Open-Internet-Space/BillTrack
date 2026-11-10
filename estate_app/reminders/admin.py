@@ -6,6 +6,8 @@ from django.db import DatabaseError
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.utils import timezone
+from django.conf import settings
+from .composition import TemplateSelectionForm, EmailPreviewFormSet, prepare_messages
 from django.views.decorators.http import require_http_methods
 from ..models.reminders import ReminderSettings, ReminderDelivery
 from ..admin_pagination import PaginationAdminMixin
@@ -14,7 +16,7 @@ from .service import preview, send_reminders, send_test, smtp_fingerprint, mail_
 @admin.register(ReminderSettings)
 class ReminderSettingsAdmin(PaginationAdminMixin,admin.ModelAdmin):
     fields=['automatic_enabled','updated_at']
-    readonly_fields=['updated_at']
+    readonly_fields=['automatic_enabled','updated_at']
     def has_module_permission(self,request):return request.user.is_superuser
     def has_view_permission(self,request,obj=None):return request.user.is_superuser
     def has_change_permission(self,request,obj=None):return request.user.is_superuser
@@ -42,6 +44,9 @@ def reminder_view(request):
         raise PermissionDenied
     config=ReminderSettings.objects.filter(pk=1).first() or ReminderSettings(pk=1)
     form=TestMailForm()
+    template_form=TemplateSelectionForm()
+    preview_forms=None
+    preview_error=''
     if request.method=='POST':
         action=request.POST.get('action')
         try:
@@ -55,19 +60,23 @@ def reminder_view(request):
                     else:
                         messages.success(request,'Test accepted by the mail server. Verify arrival in your mailbox.')
                         return redirect('admin-email-reminders')
-            elif action=='mode':
-                config.automatic_enabled=request.POST.get('automatic_enabled')=='on'
-                config.full_clean();config.save()
-                messages.success(request,'Automatic sending enabled for the daily task.' if config.automatic_enabled else 'Manual mode enabled; automatic sending is off.')
-                return redirect('admin-email-reminders')
-            elif action=='send':
-                selected=set(request.POST.getlist('allottee'))
-                if not selected:
-                    messages.error(request,'Select at least one allottee from the preview.')
-                else:
-                    result=send_reminders(selected=selected)
-                    messages.info(request,f"Mail server accepted: {result['accepted']}. Failed: {result['failed']}. Needs review: {result['review']}. Skipped: {result['skipped']}.")
-                    return redirect('admin-email-reminders')
+            elif action=='prepare':
+                template_form=TemplateSelectionForm(request.POST)
+                if template_form.is_valid():
+                    prepared=prepare_messages(set(request.POST.getlist('allottee')),template_form.cleaned_data['template'],request.user.pk)
+                    preview_forms=EmailPreviewFormSet(initial=prepared,prefix='emails')
+            elif action=='confirm_send':
+                preview_forms=EmailPreviewFormSet(request.POST,prefix='emails')
+                if preview_forms.is_valid():
+                    try:
+                        result=send_reminders(confirmed=preview_forms.cleaned_data,user_id=request.user.pk)
+                    except ValidationError as error:
+                        preview_error=' '.join(error.messages)
+                    else:
+                        messages.info(request,f"Mail server accepted: {result['accepted']}. Failed: {result['failed']}. Needs review: {result['review']}. Skipped: {result['skipped']}.")
+                        return redirect('admin-email-reminders')
+            elif action in ('send','mode'):
+                messages.error(request,'Reminder emails now require an editable preview and confirmation. Automatic sending is disabled.')
             elif action=='release' and request.POST.get('confirmed_not_sent')=='on':
                 delivery_id=forms.IntegerField(min_value=1).clean(request.POST.get('delivery'))
                 count=ReminderDelivery.objects.filter(pk=delivery_id,status__in=['preparing','sending','review']).update(
@@ -81,10 +90,13 @@ def reminder_view(request):
             messages.error(request,' '.join(error.messages))
         except DatabaseError:
             messages.error(request,'The database is busy or a result could not be saved. Check delivery history before retrying; some mail may already have been accepted.')
+    if preview_forms is not None:
+        return TemplateResponse(request,'admin/email_reminder_preview.html',{**admin.site.each_context(request),
+            'title':'Review emails before sending','preview_forms':preview_forms,'preview_error':preview_error,'from_email':settings.DEFAULT_FROM_EMAIL})
     groups,skipped=preview()
     context={**admin.site.each_context(request),'title':'Email reminders','config':config,
        'configured':mail_configured(),'verified':bool(config.verified_config and config.verified_config==smtp_fingerprint()),
-       'groups':groups,'skipped':skipped,'test_form':form,
+       'groups':groups,'skipped':skipped,'test_form':form,'template_form':template_form,
        'recent':ReminderDelivery.objects.all()[:30],
        'uncertain':ReminderDelivery.objects.filter(status__in=['preparing','sending','review'])[:30]}
     return TemplateResponse(request,'admin/email_reminders.html',context)

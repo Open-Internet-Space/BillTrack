@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static 'estate_app/reminder_preview.css' %}">{% endblock %}
+{% block content %}
+<h1>Review emails before sending</h1>
+<p>Nothing has been sent. Review every recipient, CC, subject and body. Edits apply only to this send; saved templates remain unchanged.</p>
+<p><strong>From:</strong> {{ from_email }}. Previews expire after one hour; changed balances or recipients require a new preview.</p>
+{% if preview_error %}<p class="errornote" role="alert">{{ preview_error }}</p>{% endif %}
+<form method="post" class="reminder-preview">{% csrf_token %}<input type="hidden" name="action" value="confirm_send">
+{{ preview_forms.management_form }}{{ preview_forms.non_form_errors }}
+{% for form in preview_forms %}
+<fieldset class="module aligned"><h2>Email {{ forloop.counter }}</h2>
+{{ form.non_field_errors }}
+{% for hidden in form.hidden_fields %}{{ hidden.errors }}{{ hidden }}{% endfor %}
+{% for field in form.visible_fields %}<div class="form-row">{{ field.errors }}{{ field.label_tag }}{{ field }}</div>{% endfor %}
+</fieldset>
+{% endfor %}
+<div class="submit-row"><input type="submit" value="Confirm and send" class="default"><a href="{% url 'admin-email-reminders' %}">Cancel and return to reminders</a></div>
+</form>
+<p>Mail server acceptance does not confirm inbox delivery. Double-clicks and repeated submissions cannot bypass the daily reminder guard. No invoice files are attached.</p>
+{% endblock %}

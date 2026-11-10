@@ -11,9 +11,8 @@ class ReminderSettings(models.Model):
         self.pk=1
         super().save(*args,**kwargs)
     def clean(self):
-        from ..reminders.service import mail_configured,smtp_fingerprint
-        if self.automatic_enabled and (not mail_configured() or self.verified_config!=smtp_fingerprint()):
-            raise ValidationError('Send a successful test email using the current SMTP settings before enabling automatic reminders.')
+        if self.automatic_enabled:
+            raise ValidationError('Automatic reminders are disabled. Preview and confirm each email in Admin.')
     def __str__(self):
         return 'Email reminder settings'
 

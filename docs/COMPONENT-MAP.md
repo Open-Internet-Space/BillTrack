@@ -887,26 +887,29 @@ Edit component-map.json, then run the standard-library generator. Check mode val
 <a id="email-reminders"></a>
 ## Email reminders: preview, SMTP and daily task
 
-Receipt-based calendar milestones, one combined email per allottee, duplicate claims, safe delivery history and manual-first automation.
+Superusers choose a saved template, preview/edit each email and confirm SMTP delivery. Automatic sending is disabled.
 
 | File | Named parts | What to change here |
 | --- | --- | --- |
-| [estate_app/models/reminders.py](../estate_app/models/reminders.py) | `ReminderSettings`, `ReminderDelivery` | Installation-local automatic switch and immutable delivery/milestone history. |
+| [estate_app/models/reminders.py](../estate_app/models/reminders.py) | `ReminderSettings`, `ReminderDelivery` | Private configuration verification and delivery/milestone history; automatic sending is unavailable. |
 | [estate_app/reminders/__init__.py](../estate_app/reminders/__init__.py) |  | Reminder feature package. |
 | [estate_app/reminders/service.py](../estate_app/reminders/service.py) | `cutoff_date`, `milestone`, `preview`, `send_reminders`, `send_test`, `smtp_fingerprint` | Shared read-only selection, current-balance recheck, atomic daily claims and conservative SMTP results. |
 | [estate_app/reminders/admin.py](../estate_app/reminders/admin.py) | `ReminderSettingsAdmin`, `ReminderDeliveryAdmin`, `reminder_view` | Superuser-only preview, selected sending, configuration testing and uncertain-delivery review. |
 | [estate_app/management/__init__.py](../estate_app/management/__init__.py) |  | Django management package. |
 | [estate_app/management/commands/__init__.py](../estate_app/management/commands/__init__.py) |  | Django command discovery. |
-| [estate_app/management/commands/send_bill_reminders.py](../estate_app/management/commands/send_bill_reminders.py) | `Command` | Preview by default; explicit --send or guarded --automatic. |
+| [estate_app/management/commands/send_bill_reminders.py](../estate_app/management/commands/send_bill_reminders.py) | `Command` | Read-only CLI preview; --send rejected and --automatic a no-op. |
 | [templates/admin/email_reminders.html](../templates/admin/email_reminders.html) |  | Admin controls and delivery history. |
-| [estate_app/templates/reminders/email.txt](../estate_app/templates/reminders/email.txt) |  | Combined plain-text reminder; no attachments or private-site links. |
-| [scripts/install_reminder_task.ps1](../scripts/install_reminder_task.ps1) |  | Separate limited-user daily 09:30 Windows task; preserves the production task. |
+| [scripts/install_reminder_task.ps1](../scripts/install_reminder_task.ps1) |  | Historical scheduling helper; no longer needed because automatic reminders are disabled. |
+| [estate_app/reminders/composition.py](../estate_app/reminders/composition.py) | `prepare_messages`, `confirmed_messages` | Saved-template merge, editable preview forms and user/balance/config-bound signed confirmations |
+| [templates/admin/email_reminder_preview.html](../templates/admin/email_reminder_preview.html) |  | Editable SMTP To/CC/Subject/Body and explicit confirmation |
+| [estate_app/static/estate_app/reminder_preview.css](../estate_app/static/estate_app/reminder_preview.css) |  | Responsive SMTP preview form controls |
+| [estate_app/reminders/delivery.py](../estate_app/reminders/delivery.py) | `send_message`, `PartialRecipientAcceptance` | SMTP partial-recipient acceptance stays held for review, protecting CC recipients from duplicate retries. |
 
-**Settings first:** Private SMTP settings in .env. Automatic sending defaults off and requires a successful setup test.
+**Settings first:** Private SMTP settings in .env; saved email templates and default CC addresses in Admin. Every reminder requires a preview.
 
-**Keep in mind:** Never send test reminders to real allottees. Do not retry uncertain SMTP submissions without checking provider activity. Full backups contain mail history; business JSON exports exclude it.
+**Keep in mind:** Do not bypass signed preview checks or daily claims. Preview never sends; changes require a fresh preview; uncertain submissions require provider review.
 
-**Verify:** [estate_app/tests/test_reminders.py](../estate_app/tests/test_reminders.py).
+**Verify:** [estate_app/tests/test_reminders.py](../estate_app/tests/test_reminders.py), [estate_app/tests/test_smtp_preview.py](../estate_app/tests/test_smtp_preview.py).
 
 <a id="admin-maintenance"></a>
 ## Admin maintenance and modification guides

@@ -11,11 +11,11 @@ from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage, get_connection
 from django.core.validators import validate_email
 from django.db.models import F
-from django.template.loader import render_to_string
 from django.utils import timezone
 from ..models import Bill
 from ..models.reminders import ReminderSettings, ReminderDelivery
 from ..views.bills import bill_read_queryset
+from .delivery import send_message, PartialRecipientAcceptance
 
 OFFSETS=(-1,0,1,7,14,26)
 BLOCKING=('preparing','sending','accepted','review')
@@ -103,6 +103,8 @@ def safe_error(error):
     return 'Mail connection or submission failed. Check SMTP settings and network access; private server details were not logged.'
 
 def send_test(address):
+    from .composition import validate_sender
+    validate_sender()
     validate_email(address)
     if not mail_configured():
         raise ValidationError('Configure the Gmail SMTP sender and app password in the private .env first.')
@@ -118,22 +120,19 @@ def send_test(address):
     config,_=ReminderSettings.objects.get_or_create(pk=1)
     config.verified_config=smtp_fingerprint();config.save(update_fields=['verified_config','updated_at'])
 
-def send_reminders(today=None,selected=None,automatic=False):
+def send_reminders(today=None,selected=None,automatic=False,confirmed=None,user_id=None):
     today=today or timezone.localdate()
     result={'accepted':0,'failed':0,'review':0,'skipped':0}
-    if automatic:
-        config=ReminderSettings.objects.filter(pk=1).first()
-        if not config or not config.automatic_enabled:
-            return result
-        if not mail_configured() or config.verified_config!=smtp_fingerprint():
-            result['error']='Automatic sending paused: verify the current SMTP configuration with a test email.'
-            return result
+    if automatic or confirmed is None:
+        result['error']='Reminder emails require a preview and confirmation in Admin; automatic and direct sending are disabled.'
+        return result
+    from .composition import confirmed_messages, group_fingerprint
+    approved=confirmed_messages(confirmed,user_id,today)
     groups,_=preview(today)
-    if selected is not None:
-        groups=[group for group in groups if group['uuid'] in selected]
+    groups=[group for group in groups if group['uuid'] in approved]
     for group in groups:
         log,created=ReminderDelivery.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
-            'allottee':group['allottee'],'allottee_name':group['allottee'].name,'recipient':group['email'],'items':group['items']})
+            'allottee':group['allottee'],'allottee_name':group['allottee'].name,'recipient':approved[group['uuid']]['to'],'items':group['items']})
         if not created:
             claimed=ReminderDelivery.objects.filter(pk=log.pk,status__in=['failed','skipped']).update(status='preparing',attempts=F('attempts')+1,error='')
             if not claimed:
@@ -141,10 +140,10 @@ def send_reminders(today=None,selected=None,automatic=False):
             log.refresh_from_db()
         # Re-read after claiming; do not hold a database transaction during network calls.
         fresh=next((g for g in preview(today,ignore_log_pk=log.pk)[0] if g['uuid']==group['uuid']),None)
-        if fresh is None:
-            log.status='skipped';log.error='No eligible balances remained after the final recheck.';log.save()
+        if fresh is None or group_fingerprint(fresh,today)!=approved[group['uuid']]['fingerprint']:
+            log.status='skipped';log.error='Reminder details changed after preview. Prepare and confirm a new preview.';log.save()
             result['skipped']+=1;continue
-        log.items=fresh['items'];log.recipient=fresh['email'];log.allottee_name=fresh['allottee'].name;log.save()
+        log.items=fresh['items'];log.recipient=approved[group['uuid']]['to'];log.allottee_name=fresh['allottee'].name;log.save()
         if not mail_configured():
             log.status='failed';log.error='SMTP sender/app password is not configured.';log.save()
             result['failed']+=1;break
@@ -155,11 +154,14 @@ def send_reminders(today=None,selected=None,automatic=False):
             log.status='failed';log.error=safe_error(error);log.save()
             result['failed']+=1;break
         try:
-            body=render_to_string('reminders/email.txt',{'group':fresh,'today':today})
-            message=EmailMessage('BillTrack payment reminder',body,settings.DEFAULT_FROM_EMAIL,[log.recipient],connection=connection)
+            content=approved[group['uuid']]
+            cc=[address.strip() for address in content['cc'].replace(';',',').split(',') if address.strip()]
+            message=EmailMessage(content['subject'],content['body'],settings.DEFAULT_FROM_EMAIL,[log.recipient],cc=cc,connection=connection)
             log.status='sending';log.save(update_fields=['status','updated_at'])
             try:
-                count=message.send()
+                count=send_message(message,connection)
+            except PartialRecipientAcceptance:
+                log.status='review';log.error='Some recipients were refused; others may already have received the message. Check provider activity before permitting another attempt.'
             except (smtplib.SMTPRecipientsRefused,smtplib.SMTPSenderRefused,smtplib.SMTPDataError) as error:
                 log.status='failed';log.error=safe_error(error)
             except Exception:

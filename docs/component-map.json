@@ -1543,7 +1543,7 @@
       "id": "email-reminders",
       "title": "Email reminders: preview, SMTP and daily task",
       "parent": "admin",
-      "purpose": "Receipt-based calendar milestones, one combined email per allottee, duplicate claims, safe delivery history and manual-first automation.",
+      "purpose": "Superusers choose a saved template, preview/edit each email and confirm SMTP delivery. Automatic sending is disabled.",
       "files": [
         {
           "path": "estate_app/models/reminders.py",
@@ -1551,7 +1551,7 @@
             "ReminderSettings",
             "ReminderDelivery"
           ],
-          "role": "Installation-local automatic switch and immutable delivery/milestone history."
+          "role": "Private configuration verification and delivery/milestone history; automatic sending is unavailable."
         },
         {
           "path": "estate_app/reminders/__init__.py",
@@ -1594,7 +1594,7 @@
           "symbols": [
             "Command"
           ],
-          "role": "Preview by default; explicit --send or guarded --automatic."
+          "role": "Read-only CLI preview; --send rejected and --automatic a no-op."
         },
         {
           "path": "templates/admin/email_reminders.html",
@@ -1602,21 +1602,43 @@
           "role": "Admin controls and delivery history."
         },
         {
-          "path": "estate_app/templates/reminders/email.txt",
-          "symbols": [],
-          "role": "Combined plain-text reminder; no attachments or private-site links."
-        },
-        {
           "path": "scripts/install_reminder_task.ps1",
           "symbols": [],
-          "role": "Separate limited-user daily 09:30 Windows task; preserves the production task."
+          "role": "Historical scheduling helper; no longer needed because automatic reminders are disabled."
+        },
+        {
+          "path": "estate_app/reminders/composition.py",
+          "role": "Saved-template merge, editable preview forms and user/balance/config-bound signed confirmations",
+          "symbols": [
+            "prepare_messages",
+            "confirmed_messages"
+          ]
+        },
+        {
+          "path": "templates/admin/email_reminder_preview.html",
+          "role": "Editable SMTP To/CC/Subject/Body and explicit confirmation",
+          "symbols": []
+        },
+        {
+          "path": "estate_app/static/estate_app/reminder_preview.css",
+          "role": "Responsive SMTP preview form controls",
+          "symbols": []
+        },
+        {
+          "path": "estate_app/reminders/delivery.py",
+          "symbols": [
+            "send_message",
+            "PartialRecipientAcceptance"
+          ],
+          "role": "SMTP partial-recipient acceptance stays held for review, protecting CC recipients from duplicate retries."
         }
       ],
       "tests": [
-        "estate_app/tests/test_reminders.py"
+        "estate_app/tests/test_reminders.py",
+        "estate_app/tests/test_smtp_preview.py"
       ],
-      "settings": "Private SMTP settings in .env. Automatic sending defaults off and requires a successful setup test.",
-      "caution": "Never send test reminders to real allottees. Do not retry uncertain SMTP submissions without checking provider activity. Full backups contain mail history; business JSON exports exclude it."
+      "settings": "Private SMTP settings in .env; saved email templates and default CC addresses in Admin. Every reminder requires a preview.",
+      "caution": "Do not bypass signed preview checks or daily claims. Preview never sends; changes require a fresh preview; uncertain submissions require provider review."
     },
     {
       "id": "admin-maintenance",
