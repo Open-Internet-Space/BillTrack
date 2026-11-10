@@ -6,7 +6,7 @@ import { matchesSearch } from "../../Filters";
 import RefreshButton from "../../RefreshButton";
 import API from "../../api";
 
-export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, initialContext }) {
+export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, onOpenDraft, initialContext }) {
   const billRows = useMemo(() => Array.isArray(bills) ? bills : [], [bills]);
   const [refreshing, setRefreshing] = useState(false);
   const [filters, setFilters] = useState({ tenant: String(initialContext?.tenant || "all"), status: "all", receipt: "all", search: "", type: "all", year: "all", month: "all", billId: initialContext?.billId || null });
@@ -143,6 +143,11 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
       <div className="page-toolbar" style={{ display: "flex", justifyContent: "space-between", marginBottom: 22 }}>
         <h1 className="page-title">Bills</h1>
         <div className="toolbar-actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <button className="btn-ghost" disabled={!selectedBillIds.length} onClick={()=>{
+            const selected=billRows.filter(b=>selectedBillIds.includes(b.id));
+            if(!selected.length||selected.some(b=>b.tenant!==selected[0].tenant)){showToast?.("Select bills belonging to one allottee only.",false);return;}
+            onOpenDraft({allotteeId:selected[0].tenant,billIds:selectedBillIds});
+          }}>Draft Email</button>
           <RefreshButton onRefresh={refreshBills} busy={refreshing} />
           <button
             className="btn-ghost"

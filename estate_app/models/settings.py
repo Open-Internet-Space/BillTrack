@@ -1,3 +1,4 @@
+from ..email_drafts.validation import validate_recipients
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
@@ -61,6 +62,8 @@ class SystemSettings(models.Model):
     bank_details = models.TextField(blank=True, default='',
                                     help_text='One entry per line; account numbers are kept as text, including leading zeroes.')
     invoice_remarks = models.TextField(blank=True, default='')
+
+    email_draft_cc = models.CharField(max_length=2000, blank=True, default='', validators=[validate_recipients], help_text='Default email draft CC addresses, separated by commas or semicolons.')
 
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

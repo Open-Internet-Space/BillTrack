@@ -15,3 +15,5 @@ admin.site.index_template = "admin/estate_app/index.html"
 admin.site.password_change_template = 'admin/account_password_change.html'
 
 from ..reminders.admin import ReminderSettingsAdmin, ReminderDeliveryAdmin
+
+from ..email_drafts.admin import EmailTemplateAdmin

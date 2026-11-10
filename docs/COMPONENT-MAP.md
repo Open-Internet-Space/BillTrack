@@ -61,6 +61,7 @@ Run `python scripts/build_component_map.py` after editing the registry; use `--c
 - [Automated test sources and isolated test data](#tests)
 - [Component registry and generated guides](#modification-guide)
 - [Private organisation profile and invoice readiness](#private-configuration)
+- [Email templates and manual Mail Merge](#email-drafts)
 
 ## I want to change…
 
@@ -111,6 +112,14 @@ Related: [modification-guide](#modification-guide), [tests](#tests).
 3. Run email account tests against a file-backed SQLite test database, including concurrent OTP and approval cases.
 
 Related: [authentication](#authentication), [email-accounts](#email-accounts), [reset-screen](#reset-screen).
+
+### Change reusable email templates or manual Mail Merge
+
+1. Edit named templates and default CC addresses in Admin before changing source.
+2. Use the email_drafts service for generated bill content and the frontend email-drafts feature for editing/copy behaviour.
+3. Run the feature tests and full suites; do not send real mail or change dispatch/reminder state.
+
+Related: [email-drafts](#email-drafts).
 
 <a id="interface"></a>
 ## Web application and navigation
@@ -978,3 +987,26 @@ Local database/media configuration, neutral defaults and printing guard.
 **Keep in mind:** Keep all actual organisation and bank/tax data in ignored SQLite/media and private backups.
 
 **Verify:** [estate_app/tests/test_private_configuration.py](../estate_app/tests/test_private_configuration.py).
+
+<a id="email-drafts"></a>
+## Email templates and manual Mail Merge
+
+Save reusable named templates in Admin; merge selected allottee and bill details into temporary editable emails for manual copying.
+
+| File | Named parts | What to change here |
+| --- | --- | --- |
+| [estate_app/email_drafts/__init__.py](../estate_app/email_drafts/__init__.py) |  | Feature package |
+| [estate_app/email_drafts/validation.py](../estate_app/email_drafts/validation.py) | `validate_template` | Literal placeholders and address/header validation |
+| [estate_app/email_drafts/service.py](../estate_app/email_drafts/service.py) | `generate` | Current financial snapshot and plain-text draft generation |
+| [estate_app/email_drafts/api.py](../estate_app/email_drafts/api.py) | `EmailDraftViewSet` | Approved-user template reads and temporary generation API; no saving or sending |
+| [estate_app/email_drafts/admin.py](../estate_app/email_drafts/admin.py) | `EmailTemplateAdmin` | Admin-managed reusable templates |
+| [estate_app/models/email_drafts.py](../estate_app/models/email_drafts.py) | `EmailTemplate` | Private reusable template storage, without allottee draft persistence |
+| [estate_app/migrations/0002_email_templates.py](../estate_app/migrations/0002_email_templates.py) | `seed_templates` | Additive template/default-CC schema and generic template seeds |
+| [frontend/src/features/email-drafts/EmailDrafts.jsx](../frontend/src/features/email-drafts/EmailDrafts.jsx) | `EmailDrafts` | Choose a saved template, merge details, edit temporarily and copy; no saved allottee drafts |
+| [frontend/src/features/email-drafts/email-drafts.css](../frontend/src/features/email-drafts/email-drafts.css) |  | Responsive draft workspace styling |
+
+**Settings first:** Admin Email templates and System Settings default CC addresses; saved templates stay in private SQLite.
+
+**Keep in mind:** Merged emails are temporary, never saved by allottee and never sent. Full backups preserve templates; business JSON does not.
+
+**Verify:** [estate_app/tests/test_email_drafts.py](../estate_app/tests/test_email_drafts.py), [frontend/src/features/email-drafts/emailDrafts.test.jsx](../frontend/src/features/email-drafts/emailDrafts.test.jsx).

@@ -6,7 +6,11 @@ from rest_framework.routers import DefaultRouter
 from . import views
 from .views.reports import reports
 
+from .email_drafts.api import EmailDraftViewSet, EmailTemplateViewSet
+
 router = DefaultRouter()
+router.register('email-drafts', EmailDraftViewSet, basename='email-draft')
+router.register('email-templates', EmailTemplateViewSet, basename='email-template')
 router.register('tenants', views.TenantViewSet, basename='tenant')
 router.register('bills', views.BillViewSet, basename='bill')
 router.register('payments', views.PaymentViewSet, basename='payment')

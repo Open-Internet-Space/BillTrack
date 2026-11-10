@@ -4,7 +4,7 @@ import FilterBar, { matchesSearch } from "../../Filters";
 import RefreshButton from "../../RefreshButton";
 import { TypeBadge } from "../../shared/Badges.jsx";
 
-export function Allottees({ tenants, onOpenBills, setModal, refresh, refreshing }) {
+export function Allottees({ tenants, onOpenBills, onOpenDraft, setModal, refresh, refreshing }) {
   const [filters, setFilters] = useState({ search: "", type: "all", active: "all", sort: "name" });
   const tenantRows = Array.isArray(tenants) ? tenants : [];
   const types = [...new Set(tenantRows.map(t => t.type).filter(Boolean))].sort();
@@ -67,7 +67,7 @@ export function Allottees({ tenants, onOpenBills, setModal, refresh, refreshing 
                 <td style={{ padding: "12px 16px" }}>{t.last_billed_month || "Never billed"}</td>
                 <td style={{ padding: "12px 16px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#8b949e" }}>Due 5d after receipt<br /><span style={{ fontSize: 12 }}>{t.penalty_type || "system"} / {t.custom_penalty_frequency || "system"}</span></td>
                 <td style={{ padding: "12px 16px", fontSize: 11, color: t.active ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{t.active ? "● ACTIVE" : "○ INACTIVE"}</td>
-                <td style={{ padding: "12px 16px" }}><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "editTenant", data: t })}>Edit</button><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} aria-label={`Raise bill for ${t.name}`} disabled={!t.active} title={t.active ? "Open this allottee's bills" : "Activate this allottee before raising bills"} onClick={() => onOpenBills({ tenant: t.id })}>Raise Bill</button></div></td>
+                <td style={{ padding: "12px 16px" }}><div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "editTenant", data: t })}>Edit</button><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => onOpenDraft({allotteeId:t.id})}>Email Draft</button><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} aria-label={`Raise bill for ${t.name}`} disabled={!t.active} title={t.active ? "Open this allottee's bills" : "Activate this allottee before raising bills"} onClick={() => onOpenBills({ tenant: t.id })}>Raise Bill</button></div></td>
               </tr>
             ))}
           </tbody>

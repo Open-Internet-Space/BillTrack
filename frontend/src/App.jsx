@@ -1,3 +1,4 @@
+import { EmailDrafts } from "./features/email-drafts/EmailDrafts.jsx";
 import "./branding.css";
 import { useState, useEffect, useRef } from "react";
 import Reports from "./features/reports/Reports";
@@ -35,6 +36,17 @@ export default function App() {
   const [revision, setRevision] = useState(0);
   const [loadState, setLoadState] = useState({ loading: true, error: "" });
   const [billContext, setBillContext] = useState(null);
+
+  const [draftContext,setDraftContext]=useState(null);
+  const [draftDirty,setDraftDirty]=useState(false);
+  const [draftBusy,setDraftBusy]=useState(false);
+  const leaveDraft=()=>{
+    if(page!=="drafts")return true;
+    if(draftBusy){showToast("Wait for the draft operation to finish.",false);return false;}
+    return !draftDirty||window.confirm("Discard unsaved draft edits?");
+  };
+  const navigate=next=>{if(next===page)return;if(leaveDraft()){setDraftDirty(false);setDraftContext(null);setPage(next);}};
+  const openDraft=context=>{setDraftContext(context);setPage("drafts");};
 
   // Data
   const [stats, setStats] = useState(null);
@@ -167,6 +179,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if(!leaveDraft())return;
     API.logout();
     loaded.current = { tenants: 0, bills: 0, payments: 0 };
     setUser(null);
@@ -195,7 +208,7 @@ export default function App() {
     <div className="app-shell" style={{ background: "#0d1117", minHeight: "100vh", color: "#e6edf3", display: "flex" }}>
 
       {/* Sidebar */}
-      <Sidebar user={user} page={page} setBillContext={setBillContext} setPage={setPage} handleLogout={handleLogout} />
+      <Sidebar user={user} page={page} setBillContext={setBillContext} setPage={navigate} handleLogout={handleLogout} />
 
       {/* Main */}
       <main ref={mainRef} tabIndex={-1} className="app-main" aria-busy={loadState.loading} style={{ flex: 1, padding: 28 }}>
@@ -204,11 +217,12 @@ export default function App() {
         {loadState.error && <div role="alert" className="card load-error"><p>{loadState.error}</p><button className="btn-primary" onClick={refreshData}>Retry</button></div>}
         <div hidden={loadState.loading || Boolean(loadState.error)}>
         {page === "dashboard" && stats && <Dashboard stats={stats} bills={bills} tenants={tenants} onOpenBills={openBills} refresh={refreshData} refreshing={loadState.loading} />}
-        {page === "tenants" && <Allottees tenants={tenants} onOpenBills={openBills} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
-        {page === "bills" && <Bills key={`${billContext?.tenant || "all"}-${billContext?.billId || "all"}`} initialContext={billContext} bills={bills} setBills={setBills} tenants={tenants} setModal={setModal} refresh={refreshData} showToast={showToast} />}
+        {page === "tenants" && <Allottees onOpenDraft={openDraft} tenants={tenants} onOpenBills={openBills} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
+        {page === "bills" && <Bills onOpenDraft={openDraft} key={`${billContext?.tenant || "all"}-${billContext?.billId || "all"}`} initialContext={billContext} bills={bills} setBills={setBills} tenants={tenants} setModal={setModal} refresh={refreshData} showToast={showToast} />}
         {page === "payments" && <Payments payments={payments} bills={bills} tenants={tenants} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
         {page === "adjustments" && <PaymentAdjustments payments={payments} bills={bills} refresh={refreshData} refreshing={loadState.loading} />}
         {page === "penalty" && <PenaltyPage bills={bills} tenants={tenants} refresh={refreshData} refreshing={loadState.loading} />}
+        {page === "drafts" && <EmailDrafts context={draftContext} tenants={tenants} onDirty={setDraftDirty} onBusy={setDraftBusy} />}
         {page === "reports" && <Reports api={API} tenants={tenants} refresh={refreshData} />}
         </div>
       </main>

@@ -212,7 +212,7 @@
         }
       ],
       "tests": [],
-      "settings": "Printed letterhead/logo can be changed in Admin \u2192 System Settings without replacing application logos.",
+      "settings": "Printed letterhead/logo can be changed in Admin → System Settings without replacing application logos.",
       "caution": "Application logos and printed invoice branding are separate."
     },
     {
@@ -692,7 +692,7 @@
     {
       "id": "invoices",
       "title": "Invoice rendering chain",
-      "purpose": "Screen/admin selection \u2192 selection helpers \u2192 invoice context/branding \u2192 single or bulk template \u2192 common wrapper/body includes \u2192 HTML or WeasyPrint PDF.",
+      "purpose": "Screen/admin selection → selection helpers → invoice context/branding → single or bulk template → common wrapper/body includes → HTML or WeasyPrint PDF.",
       "parent": null,
       "files": [
         {
@@ -708,7 +708,7 @@
         {
           "path": "estate_app/views/invoices/__init__.py",
           "symbols": [],
-          "role": "Screen/admin selection \u2192 selection helpers \u2192 invoice context/branding \u2192 single or bulk template \u2192 common wrapper/body includes \u2192 HTML or WeasyPrint PDF."
+          "role": "Screen/admin selection → selection helpers → invoice context/branding → single or bulk template → common wrapper/body includes → HTML or WeasyPrint PDF."
         },
         {
           "path": "estate_app/views/invoices/http.py",
@@ -733,7 +733,7 @@
         "estate_app/tests/test_invoice_settings.py",
         "estate_app/tests/test_production.py"
       ],
-      "settings": "Before editing templates, check invoice branding/text in Admin \u2192 System Settings.",
+      "settings": "Before editing templates, check invoice branding/text in Admin → System Settings.",
       "caution": "Single month uses Format 2; multiple months for one allottee use consolidated charges. Mixed selections group by allottee. Preserve authentication and printed wording."
     },
     {
@@ -1005,7 +1005,7 @@
     },
     {
       "id": "legacy-pdf",
-      "title": "Legacy PDF helper \u2014 not used by current invoice routes",
+      "title": "Legacy PDF helper — not used by current invoice routes",
       "purpose": "pdf_utils contains a separate ReportLab helper. Current routes use the HTML templates and WeasyPrint; editing this helper will not change those invoices.",
       "parent": "invoices",
       "files": [
@@ -1797,6 +1797,79 @@
       ],
       "settings": "Use Admin System Settings. No organisation values are stored in .env or source.",
       "caution": "Keep all actual organisation and bank/tax data in ignored SQLite/media and private backups."
+    },
+    {
+      "id": "email-drafts",
+      "title": "Email templates and manual Mail Merge",
+      "parent": null,
+      "purpose": "Save reusable named templates in Admin; merge selected allottee and bill details into temporary editable emails for manual copying.",
+      "settings": "Admin Email templates and System Settings default CC addresses; saved templates stay in private SQLite.",
+      "caution": "Merged emails are temporary, never saved by allottee and never sent. Full backups preserve templates; business JSON does not.",
+      "files": [
+        {
+          "path": "estate_app/email_drafts/__init__.py",
+          "symbols": [],
+          "role": "Feature package"
+        },
+        {
+          "path": "estate_app/email_drafts/validation.py",
+          "symbols": [
+            "validate_template"
+          ],
+          "role": "Literal placeholders and address/header validation"
+        },
+        {
+          "path": "estate_app/email_drafts/service.py",
+          "symbols": [
+            "generate"
+          ],
+          "role": "Current financial snapshot and plain-text draft generation"
+        },
+        {
+          "path": "estate_app/email_drafts/api.py",
+          "symbols": [
+            "EmailDraftViewSet"
+          ],
+          "role": "Approved-user template reads and temporary generation API; no saving or sending"
+        },
+        {
+          "path": "estate_app/email_drafts/admin.py",
+          "symbols": [
+            "EmailTemplateAdmin"
+          ],
+          "role": "Admin-managed reusable templates"
+        },
+        {
+          "path": "estate_app/models/email_drafts.py",
+          "symbols": [
+            "EmailTemplate"
+          ],
+          "role": "Private reusable template storage, without allottee draft persistence"
+        },
+        {
+          "path": "estate_app/migrations/0002_email_templates.py",
+          "symbols": [
+            "seed_templates"
+          ],
+          "role": "Additive template/default-CC schema and generic template seeds"
+        },
+        {
+          "path": "frontend/src/features/email-drafts/EmailDrafts.jsx",
+          "symbols": [
+            "EmailDrafts"
+          ],
+          "role": "Choose a saved template, merge details, edit temporarily and copy; no saved allottee drafts"
+        },
+        {
+          "path": "frontend/src/features/email-drafts/email-drafts.css",
+          "symbols": [],
+          "role": "Responsive draft workspace styling"
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_email_drafts.py",
+        "frontend/src/features/email-drafts/emailDrafts.test.jsx"
+      ]
     }
   ],
   "recipes": [
@@ -1809,7 +1882,7 @@
         "admin-settings"
       ],
       "steps": [
-        "First open Admin \u2192 System Settings: ordinary invoice branding and wording are editable data.",
+        "First open Admin → System Settings: ordinary invoice branding and wording are editable data.",
         "For layout changes, use the relevant body include and invoice style block.",
         "Compare single-month, consolidated and mixed-allottee HTML/PDF output before publishing."
       ]
@@ -1883,6 +1956,17 @@
         "Edit the account_security module for OTP, approval or email identity behavior.",
         "Edit the shared accounts templates for appearance; preserve CSRF, password hiding and generic recovery responses.",
         "Run email account tests against a file-backed SQLite test database, including concurrent OTP and approval cases."
+      ]
+    },
+    {
+      "title": "Change reusable email templates or manual Mail Merge",
+      "components": [
+        "email-drafts"
+      ],
+      "steps": [
+        "Edit named templates and default CC addresses in Admin before changing source.",
+        "Use the email_drafts service for generated bill content and the frontend email-drafts feature for editing/copy behaviour.",
+        "Run the feature tests and full suites; do not send real mail or change dispatch/reminder state."
       ]
     }
   ]

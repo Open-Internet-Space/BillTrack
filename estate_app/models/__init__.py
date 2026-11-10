@@ -7,3 +7,5 @@ from .payments import Payment
 
 from .reminders import ReminderSettings, ReminderDelivery
 from .account_security import AccountAccess, EmailChallenge, AccountRateLimit, AccountAuthenticator, EmergencyRecoveryState
+
+from .email_drafts import EmailTemplate

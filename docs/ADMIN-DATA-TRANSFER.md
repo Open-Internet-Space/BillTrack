@@ -5,3 +5,5 @@ Superusers can export/import allottees, bills, payments and System Settings in v
 Replace requires explicit confirmation; Merge adds missing records and preserves matches. A private safety export is saved before changes. Validation and transactions prevent partial import. Uploaded paths are never trusted; images are separately validated.
 
 Keep downloaded billtrack-data-*.json, before-import JSON and all backups private and outside source control. Importing an unconfigured blank profile keeps printing blocked until an organisation name is entered. Export/import format and financial semantics remain unchanged.
+
+Reusable email templates are excluded from business JSON. Default draft CC addresses are included in System Settings. Use a full database backup to preserve templates; merged emails are temporary and are not saved; see [email drafts](EMAIL-DRAFTS.md).

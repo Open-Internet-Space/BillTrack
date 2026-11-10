@@ -17,3 +17,5 @@ Features include allottees, single/bulk/consolidated invoices, receipts, princip
 Use [the feature-to-file guide](docs/COMPONENT-MAP.md) to modify components. See [security](SECURITY.md) and [private-repository preparation](docs/PUBLICATION-REVIEW.md). Dependency updates and public internet hosting need separate review. No default account or business dataset is supplied.
 
 The original private installation is not changed, renamed or migrated by this preparation. No release or tag is created. Keep downloaded exports, backups and generated documents private even after a repository is reviewed.
+
+Manual vendor correspondence: [merge saved templates and copy temporary email drafts](docs/EMAIL-DRAFTS.md). No mail is sent by the draft workflow.

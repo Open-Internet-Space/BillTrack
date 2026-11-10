@@ -20,6 +20,7 @@ class SystemSettingsAdmin(PaginationAdminMixin, admin.ModelAdmin):
         ('Payment information', {'fields': ['bank_details', 'invoice_remarks']}),
         ('Penalty calculation', {'fields': ['penalty_type', 'penalty_rate_pa', 'penalty_lumpsum', 'penalty_frequency']}),
         ('GST calculation', {'fields': ['gst_applicable', 'gst_rate', 'cgst_rate', 'sgst_rate']}),
+        ('Manual email drafts', {'fields': ['email_draft_cc']}),
         ('Last updated', {'fields': ['updated_at', 'updated_by']}),
     ]
 

@@ -10,6 +10,7 @@ const navItems = [
     { id: "adjustments", label: "Payment Adjustments" },
     { id: "penalty", label: "Penalties" },
     { id: "reports", label: "Reports" },
+    { id: "drafts", label: "Email Drafts" },
   ];
 return (<aside className="app-sidebar" style={{ width: 220, background: "#161b22", borderRight: "1px solid #21262d", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <div style={{ padding: "24px 20px 16px" }}>
