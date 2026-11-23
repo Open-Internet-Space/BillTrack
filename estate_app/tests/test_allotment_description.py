@@ -44,6 +44,7 @@ class AllotmentDescriptionTests(TestCase):
         SystemSettings.get_settings()
         data=export_data();objects,logo=validate_data(data);restore_data(objects,logo,'replace')
         self.assertEqual(Tenant.objects.get().allotment_description,'Shop 12')
+        data['version']=1
         for record in data['records']:
             if record['model']=='estate_app.tenant':record['fields'].pop('allotment_description')
             if record['model']=='estate_app.systemsettings':record['fields'].pop('email_draft_cc',None)

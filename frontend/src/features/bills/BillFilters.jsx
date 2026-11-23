@@ -2,6 +2,7 @@ import Pagination from "../../Pagination";
 
 export function BillFilters({ filters, billRows, setFilters, changeFilter, types, tenantOptions, yearOptions, monthOptions, pagination }) {
   return (<div className="card" style={{ padding: "12px 14px", marginBottom: 14 }}>
+        {filters.allotment && <div className="bill-context"><span>Bills for {filters.shopCode || 'selected shop'} · allotment term {filters.allotment}</span><button className="btn-ghost" onClick={() => setFilters(previous => ({ ...previous, allotment: null, shopCode: '' }))}>Show all allottee bills</button></div>}
         {filters.billId && <div className="bill-context"><span>Opened from Dashboard: {billRows.find(b => b.id === filters.billId)?.invoice_no || "selected bill"}</span><button className="btn-ghost" onClick={() => setFilters(previous => ({ ...previous, billId: null }))}>Show all allottee bills</button></div>}
         <div className="filter-grid">
           <label htmlFor="bills-search">Search invoice / reference<input id="bills-search" className="inp" type="search" value={filters.search} onChange={e => changeFilter("search", e.target.value)} /></label>
@@ -37,11 +38,11 @@ export function BillFilters({ filters, billRows, setFilters, changeFilter, types
             </select>
           </div>
           <div>
-            <label htmlFor="bills-receipt">Receipt Status</label>
+            <label htmlFor="bills-receipt">Email / Receipt Status</label>
             <select id="bills-receipt" className="inp" value={filters.receipt} onChange={e => changeFilter("receipt", e.target.value)}>
-              <option value="all">All Receipts</option>
-              <option value="pending">Pending Receipt</option>
-              <option value="confirmed">Receipt Confirmed</option>
+              <option value="all">All confirmation states</option>
+              <option value="pending">Pending email / receipt</option>
+              <option value="confirmed">Confirmed email / receipt</option>
             </select>
           </div>
           <button className="btn-ghost" style={{ padding: "9px 14px", fontSize: 12 }} onClick={() => setFilters({ tenant: "all", status: "all", receipt: "all", search: "", type: "all", year: "all", month: "all" })}>

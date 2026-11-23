@@ -17,7 +17,7 @@
       {% for item in invoice.line_items %}
       <tr>
         <td class="center">{{ forloop.counter }}</td>
-        <td>{{ item.period }}</td>
+        <td>{{ item.period }}{% if invoice.mixed_policies %}<div class="item-sub">{{ item.policy_label }} · Due {{ item.due_date }}</div>{% endif %}</td>
 
         <td class="right">{{ item.rent }}</td>
         <td class="right">{% if item.electric_reading %}{{ item.electric_reading }} unit{% else %}-{% endif %}</td>
@@ -26,6 +26,7 @@
         <td class="right">{{ item.gst_on_rent }}</td>
         <td class="right">{{ item.total_amount }}</td>
       </tr>
+      {% if item.notes %}<tr><td colspan="8" class="item-sub">{{ item.period }} note: {{ item.notes|linebreaksbr }}</td></tr>{% endif %}
       {% endfor %}
     </tbody>
   </table>

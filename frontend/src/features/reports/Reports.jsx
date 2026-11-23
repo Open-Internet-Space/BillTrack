@@ -1,11 +1,11 @@
 import { allotteeLabel } from "../../shared/format.js";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination, { usePagination } from '../../Pagination';
 import RefreshButton from '../../RefreshButton';
 
 const REPORTS = {
   pending: 'Pending bills', payments: 'Payments received', penalties: 'Penalties',
-  bills: 'Bills register', statement: 'Bills and payments statement',
+  bills: 'Bills register', statement: 'Bills and payments statement', estate: 'Estate dues and security statement',
 };
 const money = value => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const localToday = () => {
@@ -15,17 +15,29 @@ const localToday = () => {
 
 export default function Reports({ api, tenants, refresh }) {
   const [filters, setFilters] = useState(() => ({ report: 'pending', from: `${localToday().slice(0, 7)}-01`,
-    to: localToday(), tenant: '', type: '', status: '', receipt_status: '', billing_from: '', billing_to: '' }));
+    to: localToday(), tenant: '', type: '', status: '', receipt_status: '', billing_from: '', billing_to: '',
+    shop:'', allotment:'', policy:'' }));
+  const [estateFilters,setEstateFilters] = useState({shops:[],terms:[]});
   const [report, setReport] = useState(null);
   const [selectedColumns, setSelectedColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState('');
   const [error, setError] = useState('');
+  useEffect(() => {
+    if (!api.getAll) return;
+    let active = true;
+    Promise.all([api.getAll('/shops/'), api.getAll('/allotments/')]).then(([shops, terms]) => {
+      if (active) setEstateFilters({shops,terms});
+    }).catch(err => { if (active) setError(err.message); });
+    return () => { active = false; };
+  }, [api]);
   const pagination = usePagination(report?.rows || [], report);
   const visibleColumns = report?.columns.filter(column => selectedColumns.includes(column.key)) || [];
   const periodReport = ['payments', 'bills', 'statement'].includes(filters.report);
   const change = event => {
-    setFilters(current => ({ ...current, ...(event.target.name === 'report' ? { billing_from: '', billing_to: '' } : {}), [event.target.name]: event.target.value }));
+    const {name,value} = event.target;
+    setFilters(current => ({ ...current, ...(name === 'report' ? { billing_from: '', billing_to: '', status:'', receipt_status:'',policy:'' } : {}),
+      ...(['shop','tenant'].includes(name) ? {allotment:''} : {}), [name]: value }));
     setReport(null);
     setError('');
   };
@@ -83,6 +95,14 @@ export default function Reports({ api, tenants, refresh }) {
               {['Shop', 'Canteen', 'Contractor'].map(type => <option key={type}>{type}</option>)}
             </select>
           </label>
+          <label>Shop<select name="shop" className="inp" value={filters.shop} onChange={change}><option value="">All shops</option>
+            {estateFilters.shops.map(shop=><option key={shop.id} value={shop.id}>{shop.code} · {shop.name}</option>)}</select></label>
+          <label>Allotment<select name="allotment" className="inp" value={filters.allotment} onChange={change}><option value="">All terms</option>
+            {estateFilters.terms.filter(t=>(!filters.shop || String(t.shop)===filters.shop) && (!filters.tenant || String(t.tenant)===filters.tenant))
+              .map(t=><option key={t.id} value={t.id}>{t.shop_code} · {t.award_reference} · {t.tenant_name}</option>)}</select></label>
+          {filters.report!=='estate' && <label>Billing policy<select name="policy" className="inp" value={filters.policy} onChange={change}>
+            <option value="">All policies</option><option value="legacy_receipt">Legacy receipt</option><option value="notices_368_369">Notices 368–369</option>
+          </select></label>}
           {periodReport && <label htmlFor="report-from">{filters.report === 'bills' ? 'From billing month' : filters.report === 'statement' ? 'From date' : 'From payment date'}
             <input id="report-from" name="from" className="inp" type={filters.report === 'bills' ? 'month' : 'date'}
               required={filters.report === 'statement'} value={filters.report === 'bills' ? filters.from.slice(0, 7) : filters.from}
@@ -92,7 +112,7 @@ export default function Reports({ api, tenants, refresh }) {
           <label htmlFor="report-to">{periodReport ? 'Through / cutoff date' : 'Position as of'}
             <input id="report-to" name="to" className="inp" type="date" required max={localToday()} value={filters.to} onChange={change} />
           </label>
-          <label htmlFor="report-status">Payment status at cutoff
+          {filters.report!=='estate' && <><label htmlFor="report-status">Payment status at cutoff
             <select id="report-status" name="status" className="inp" value={filters.status} onChange={change}>
               <option value="">All statuses</option>
               {['Unpaid', 'Partial', 'Paid'].map(status => <option key={status}>{status}</option>)}
@@ -102,8 +122,8 @@ export default function Reports({ api, tenants, refresh }) {
             <select id="report-receipt" name="receipt_status" className="inp" value={filters.receipt_status} onChange={change}>
               <option value="">All receipt statuses</option><option value="pending">Pending Receipt</option><option value="confirmed">Receipt Confirmed</option>
             </select>
-          </label>
-          {filters.report !== 'bills' && <>
+          </label></>}
+          {!['bills','estate'].includes(filters.report) && <>
             <label htmlFor="report-billing-from">From billing month (optional)
               <input id="report-billing-from" name="billing_from" className="inp" type="month" max={filters.billing_to || filters.to.slice(0, 7)} value={filters.billing_from} onChange={change} />
             </label>
@@ -112,7 +132,7 @@ export default function Reports({ api, tenants, refresh }) {
             </label>
           </>}
         </div>
-        <p className="report-hint">{!periodReport ? (filters.report === 'penalties' ? 'Includes accrued and collected penalties through the cutoff, including settled bills.' : 'Includes earlier bills with outstanding principal or penalty through the cutoff.')
+        <p className="report-hint">{filters.report==='estate' ? 'Shop and allottee dues include rent, interest and assessed charges. Security held is shown separately.' : !periodReport ? (filters.report === 'penalties' ? 'Includes accrued and collected penalties through the cutoff, including settled bills.' : 'Includes earlier bills with outstanding principal or penalty through the cutoff.')
           : filters.report === 'bills' ? 'Selects bills by accounting month. Payment totals reflect the cutoff date.'
             : filters.report === 'statement' ? 'Opening dues and period movements reconcile to closing dues. Negative dues are credits.'
               : 'Selects receipts by payment date, including payments against older bills.'}</p>

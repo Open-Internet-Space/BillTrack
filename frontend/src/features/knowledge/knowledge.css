@@ -1,0 +1,54 @@
+.knowledge-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
+  gap: clamp(1rem, 3vw, 2.25rem);
+  align-items: start;
+}
+
+.knowledge-index > label { display: block; margin-bottom: .4rem; }
+.knowledge-index > input { width: 100%; }
+.knowledge-index h2 { color: #a5adb8; font-size: .88rem; margin: 1.25rem 0 .4rem; }
+.knowledge-index ul { padding: 0; margin: 0; list-style: none; }
+.knowledge-index button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: .65rem .75rem;
+  cursor: pointer;
+}
+.knowledge-index button:hover { background: #161b22; }
+.knowledge-index button[aria-current] { background: #241f16; border-color: #70511c; }
+.knowledge-index button[aria-current] strong { color: #ffc55b; }
+.knowledge-index button span { display: block; color: #a5adb8; margin-top: .25rem; font-size: .86rem; line-height: 1.45; }
+
+.knowledge-article {
+  max-width: 80ch;
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.knowledge-article h2 { font-size: 1.55rem; line-height: 1.25; margin-top: 0; }
+.knowledge-article h3, .knowledge-article h4 { line-height: 1.35; margin: 1.7em 0 .5em; }
+.knowledge-article p { margin: 0 0 1em; }
+.knowledge-article li + li { margin-top: .45em; }
+.knowledge-article a { color: #8cc6ff; text-underline-offset: .18em; }
+.knowledge-article pre { overflow-x: auto; padding: .85rem; background: #0d1117; border-radius: 6px; }
+.knowledge-article code { background: #0d1117; padding: .1em .2em; }
+.knowledge-article table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.knowledge-article th, .knowledge-article td { border: 1px solid #30363d; padding: .45rem; text-align: start; }
+.knowledge-article a:focus-visible, .knowledge-index button:focus-visible { outline: 2px solid #ffc55b; outline-offset: 2px; }
+.knowledge-article:focus, .knowledge-article [tabindex="-1"]:focus { outline: 2px solid #8cc6ff; outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .knowledge-layout { grid-template-columns: minmax(0, 1fr); }
+  .knowledge-index { max-height: 19rem; overflow-y: auto; padding: 0 .25rem .3rem; }
+}

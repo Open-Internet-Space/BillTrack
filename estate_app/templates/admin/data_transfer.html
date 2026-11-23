@@ -9,7 +9,7 @@
 <div id="content-main">
   <div class="module">
     <h2>Export current data and settings</h2>
-    <p>Includes allottees, bills, payments, global settings and the letterhead logo. Login accounts, passwords and machine configuration stay on this installation.</p>
+    <p>Version 2 includes allottees, shops, allotment and renewal terms, requirements, rates, bills, fees and fines, receipts, security movements, global settings and the letterhead logo. Login accounts, passwords and machine configuration stay on this installation.</p>
     <p><a class="button" href="{% url 'admin-data-transfer-export' %}">Download export (.json)</a></p>
   </div>
   {% if backup_url %}
@@ -23,11 +23,11 @@
     <fieldset class="module">
       <h2>Import an exported file</h2>
       <p>A safety backup is saved before changes. If validation or import fails, the existing database is kept.</p>
-      <p><strong>Replace:</strong> removes current allottees, bills, payments and settings and restores the file.</p>
+      <p><strong>Replace:</strong> removes current shops, terms, rates, conditions, billing, charges, receipts, security movements and settings and restores the reviewed file. Accounts and audit history are retained.</p>
       <details><summary>Review records affected by Replace</summary><ul>{{ replacement_plan.affected|unordered_list }}</ul></details>
       <input type="hidden" name="confirmation" value="{{ replacement_plan.confirmation }}">
-      <p><strong>Merge:</strong> adds missing records and keeps existing records and settings. Allottees match by UUID, bills by allottee and month/year, and payments by UUID. Conflicting invoice numbers stop the import.</p>
-      <p>Existing user accounts are preserved in both modes. Attribution matches local usernames; missing users are left blank. Files up to 25 MB are supported.</p>
+      <p><strong>Merge:</strong> adds missing records and keeps existing records and settings. Estate identities match by UUID; bills match their allottee, term and month/year. Ownership, invoice, overlap, balance or settlement conflicts stop the import. Security applications must retain their paired movements and payments.</p>
+      <p>Version 1 imports are legacy billing records only. Version 2 contains the complete estate graph. Attribution matches local usernames; missing optional users are left blank, while required financial attribution must resolve locally. Files up to 25 MB are supported.</p>
       {{ form.non_field_errors }}
       <div class="form-row">{{ form.change_reason.errors }}{{ form.change_reason.label_tag }} {{ form.change_reason }}</div>
       <div class="form-row">{{ form.file.errors }}{{ form.file.label_tag }} {{ form.file }}</div>

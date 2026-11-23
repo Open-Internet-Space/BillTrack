@@ -17,6 +17,7 @@
     <div class="meta-block">
       <div class="meta-label">Billed To</div>
       <div class="meta-line"><span class="recipient-name">{{ tenant.name }}</span></div>
+      {% if shop_code %}<div class="meta-line"><span class="meta-key">Shop</span><span class="meta-val">{{ shop_code }}</span></div>{% endif %}
       <div class="meta-line"><span class="meta-key">Type</span><span class="meta-val">{{ tenant.type }}</span></div>
       <div class="meta-line"><span class="meta-key">Address</span><span class="meta-val">{% if tenant.address_not_provided %}Not Provided{% else %}{{ tenant.address|default:"Not Provided" }}{% endif %}</span></div>
       <div class="meta-line"><span class="meta-key">GSTIN</span><span class="meta-val">{% if tenant.gstin_not_provided %}Not Provided{% else %}{{ tenant.gstin|default:"-" }}{% endif %}</span></div>

@@ -5,10 +5,21 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from .views.reports import reports
+from .estate.api import ShopViewSet, AllotmentViewSet, RequirementViewSet, RentRevisionViewSet, EstateAttentionView
+from .estate.charges import EstateChargeViewSet, ChargePaymentViewSet
+from .estate.security_api import SecurityAccountViewSet, SecurityMovementViewSet
 
 from .email_drafts.api import EmailDraftViewSet, EmailTemplateViewSet
 
 router = DefaultRouter()
+router.register('shops', ShopViewSet, basename='shop')
+router.register('allotments', AllotmentViewSet, basename='allotment')
+router.register('allotment-requirements', RequirementViewSet, basename='allotment-requirement')
+router.register('rent-revisions', RentRevisionViewSet, basename='rent-revision')
+router.register('estate-charges', EstateChargeViewSet, basename='estate-charge')
+router.register('estate-charge-payments', ChargePaymentViewSet, basename='estate-charge-payment')
+router.register('estate-security', SecurityAccountViewSet, basename='estate-security')
+router.register('security-movements', SecurityMovementViewSet, basename='security-movement')
 router.register('email-drafts', EmailDraftViewSet, basename='email-draft')
 router.register('email-templates', EmailTemplateViewSet, basename='email-template')
 router.register('tenants', views.TenantViewSet, basename='tenant')
@@ -16,6 +27,7 @@ router.register('bills', views.BillViewSet, basename='bill')
 router.register('payments', views.PaymentViewSet, basename='payment')
 
 urlpatterns = [
+    path('estate/attention/', EstateAttentionView.as_view(), name='estate-attention'),
     # Auth
     path('auth/login/', views.login_view, name='login'),
     path('auth/logout/', views.logout_view, name='logout'),

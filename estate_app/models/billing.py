@@ -2,9 +2,11 @@ from django.db import models, transaction
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import datetime
+import calendar
 import re
+from zoneinfo import ZoneInfo
 from .allottees import Tenant
 
 
@@ -23,12 +25,35 @@ class Bill(models.Model):
     invoice_no  = models.CharField(max_length=100, unique=True, blank=True, null=True,
                                    help_text="Auto format: Month/Year/Autonumber, e.g. May/2026/001")
     tenant      = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name='bills', verbose_name='Allottee')
+    allotment = models.ForeignKey('Allotment', on_delete=models.PROTECT, related_name='bills', null=True, blank=True)
+    billing_category = models.CharField(max_length=20, default='legacy', choices=[
+        ('allotment', 'Allotment'), ('other', 'Other monthly charges'), ('legacy', 'Legacy unassigned')])
+    billing_policy = models.CharField(max_length=20, default='legacy_receipt', choices=[
+        ('legacy_receipt', 'Legacy confirmed receipt'), ('notices_368_369', 'Notices 368–369')])
+    raised_date = models.DateField(null=True, blank=True)
+    email_dispatched_at = models.DateTimeField(null=True, blank=True)
+    dispatch_recipient = models.EmailField(blank=True)
+    dispatch_message_reference = models.CharField(max_length=250, blank=True)
+    dispatch_sender = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True,
+                                        related_name='estate_dispatched_bills')
+    rent_revision = models.ForeignKey('RentRevision', on_delete=models.PROTECT, null=True, blank=True, related_name='bills')
+    rate_snapshot = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True, editable=False)
+    area_snapshot = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True, editable=False)
+    rent_revision_reference = models.CharField(max_length=250, blank=True, editable=False)
+    rent_override_reason = models.TextField(blank=True)
+    rate_exception_reference = models.CharField(max_length=250, blank=True)
     month       = models.PositiveSmallIntegerField(help_text="1=Jan, 2=Feb ... 12=Dec")
     year        = models.PositiveSmallIntegerField()
 
     # Charges (base amounts before GST)
     rent        = models.DecimalField(max_digits=10, decimal_places=2, default=0,
                                      help_text="Base rent amount (before GST)")
+    full_month_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Original full-month rent before any holiday waiver. Leave empty only for legacy records.')
+    holiday_start_date = models.DateField(null=True, blank=True)
+    holiday_end_date = models.DateField(null=True, blank=True)
+    holiday_closed_days = models.PositiveSmallIntegerField(default=0, editable=False)
+    holiday_waiver = models.DecimalField(max_digits=10, decimal_places=2, default=0, editable=False)
     electric    = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     electric_reading = models.CharField(max_length=100, blank=True,
                                         help_text="Electricity reading / units details for invoice display")
@@ -47,7 +72,7 @@ class Bill(models.Model):
                                          help_text="IGST component (auto-calculated)")
 
     # Dates
-    due_date    = models.DateField()
+    due_date    = models.DateField(null=True, blank=True)
     issue_date  = models.DateField(null=True, blank=True, help_text="Confirmed receipt date through mail; payment is due five calendar days later")
     dispatch_ref_no = models.CharField(max_length=100, blank=True, help_text="Dispatch / reference number after signature")
     receipt_reset_snapshot = models.JSONField(null=True, blank=True, editable=False,
@@ -66,7 +91,21 @@ class Bill(models.Model):
 
     class Meta:
         ordering = ['-year', '-month', 'tenant__name']
-        unique_together = ['tenant', 'month', 'year']
+        constraints = [
+            models.UniqueConstraint(fields=['allotment', 'month', 'year'], condition=models.Q(allotment__isnull=False),
+                                    name='bill_allotment_period_unique'),
+            models.UniqueConstraint(fields=['tenant', 'month', 'year'], condition=models.Q(allotment__isnull=True),
+                                    name='bill_unassigned_period_unique'),
+            models.CheckConstraint(check=(models.Q(billing_category='allotment', allotment__isnull=False)
+                | models.Q(billing_category__in=['other', 'legacy'], allotment__isnull=True)), name='bill_category_link_consistent'),
+            models.CheckConstraint(check=(models.Q(billing_policy='legacy_receipt')
+                | models.Q(billing_policy='notices_368_369', allotment__isnull=False, billing_category='allotment')),
+                name='bill_policy_link_consistent'),
+            models.CheckConstraint(check=(models.Q(email_dispatched_at__isnull=True)
+                | (models.Q(billing_policy='notices_368_369', raised_date__isnull=False, dispatch_sender__isnull=False)
+                   & ~models.Q(dispatch_recipient='') & ~models.Q(dispatch_message_reference=''))),
+                name='bill_confirmed_dispatch_evidence'),
+        ]
         verbose_name = 'Bill'
         verbose_name_plural = 'Bills'
 
@@ -74,15 +113,82 @@ class Bill(models.Model):
         invoice_display = self.invoice_no or f"[Pending] {self.tenant.name} {self.get_month_name()} {self.year}"
         return invoice_display
 
-    def clean(self):
+    def clean(self, *, allotment=None, check_retained_payments=True):
+        if self.billing_policy == 'notices_368_369':
+            if not self.allotment_id or not self.allotment.notice_governed:
+                raise ValidationError({'billing_policy': 'This policy requires an allotment governed by Notices 368–369.'})
+            if self.issue_date:
+                raise ValidationError({'issue_date': 'Keep legacy receipt date empty; record notice email dispatch separately.'})
+            if self.raised_date and self.raised_date > timezone.localdate():
+                raise ValidationError({'raised_date': 'A finalized invoice cannot have a future raised date.'})
+            if check_retained_payments and self.pk:
+                retained = self.payments.all()
+                if self.raised_date:
+                    retained = retained.filter(payment_date__lt=self.raised_date)
+                if retained.exists():
+                    raise ValidationError({'raised_date': 'Keep the invoice raised on or before its earliest retained payment.'})
+            if self.email_dispatched_at:
+                if timezone.is_naive(self.email_dispatched_at) or self.email_dispatched_at > timezone.now():
+                    raise ValidationError({'email_dispatched_at': 'Record a confirmed, timezone-aware dispatch timestamp, not a future time.'})
+                if not self.raised_date or self.dispatch_day < self.raised_date:
+                    raise ValidationError({'email_dispatched_at': 'Raise the invoice before recording confirmed dispatch.'})
+                if not self.dispatch_recipient.strip() or not self.dispatch_message_reference.strip() or not self.dispatch_sender_id:
+                    raise ValidationError('Confirmed dispatch requires recipient, message reference and the sending staff member.')
+        elif self.raised_date or self.email_dispatched_at or self.dispatch_recipient or self.dispatch_message_reference or self.dispatch_sender_id:
+            raise ValidationError({'billing_policy': 'Notice date/evidence fields cannot be used on legacy receipt-policy bills.'})
         if self.issue_date and self.issue_date > timezone.localdate():
             raise ValidationError({'issue_date': 'Confirmed receipt date cannot be in the future.'})
-        if self.month < 1 or self.month > 12:
+        if not isinstance(self.month, int) or not 1 <= self.month <= 12:
             raise ValidationError({'month': 'Month must be between 1 and 12'})
-        if self.year < 2000 or self.year > 2100:
+        if not isinstance(self.year, int) or not 2000 <= self.year <= 2100:
             raise ValidationError({'year': 'Please enter a valid year'})
         if self.rent < 0 or self.electric < 0 or self.water < 0:
             raise ValidationError('Charges cannot be negative')
+        if self.full_month_rent is None and (self.holiday_start_date or self.holiday_end_date):
+            raise ValidationError({'full_month_rent': 'Record the full-month rent before applying a holiday waiver.'})
+        if self.full_month_rent is not None:
+            from ..estate.billing import holiday_rent
+            holiday_rent(self.full_month_rent, self.year, self.month, self.holiday_start_date, self.holiday_end_date)
+        if (self.billing_category == 'allotment') != bool(self.allotment_id):
+            raise ValidationError({'allotment': 'Allotment billing requires a term; other/legacy billing cannot have one.'})
+        if self.allotment_id:
+            from .estate import Allotment
+            term = allotment if allotment is not None else Allotment.objects.filter(pk=self.allotment_id).first()
+            if term is None or term.tenant_id != self.tenant_id:
+                raise ValidationError({'allotment': 'The selected term must belong to this allottee.'})
+            first = datetime.date(self.year, self.month, 1)
+            last = first.replace(day=calendar.monthrange(self.year, self.month)[1])
+            if term.start_date > last or term.effective_end < first:
+                raise ValidationError({'month': 'This billing month falls outside the selected allotment term.'})
+
+    def prepare_notice_rent(self, refresh=False):
+        if self.billing_policy != 'notices_368_369' or not self.allotment_id:
+            return
+        from ..estate.billing import annual_revisions, rent_schedule
+        if refresh or self.rate_snapshot is None or self.area_snapshot is None:
+            try:
+                schedule = rent_schedule(self.allotment, self.year, self.month)
+            except ValidationError:
+                if self.full_month_rent is None or not self.rent_override_reason.strip():
+                    raise
+                if self.raised_date and not self.rate_exception_reference.strip():
+                    raise ValidationError({'rate_exception_reference': 'Record approved authority before issuing without a rate schedule.'})
+                return
+            self.rent_revision_id = schedule['revision_id']
+            self.rate_snapshot, self.area_snapshot = schedule['rate'], schedule['area']
+            self.rent_revision_reference = schedule['approval_reference']
+        expected = (self.rate_snapshot * self.area_snapshot).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        if self.full_month_rent is None:
+            self.full_month_rent = expected
+        if self.full_month_rent != expected and not self.rent_override_reason.strip():
+            raise ValidationError({'rent_override_reason': 'Explain the reviewed difference from approved rate × actual area.'})
+        if self.rent_revision_id:
+            if self.rent_revision.original_award_id != self.allotment.original_award.pk:
+                raise ValidationError({'rent_revision': 'The rate must belong to this original award.'})
+            through = datetime.date(self.year, self.month, calendar.monthrange(self.year, self.month)[1])
+            missing = annual_revisions(self.rate_snapshot, self.rent_revision.effective_date, through)
+            if self.raised_date and missing and not self.rate_exception_reference.strip():
+                raise ValidationError({'rate_exception_reference': 'Approve the missing April revision before final issue, or record its authorized exception.'})
 
     # ── Business Logic (ALL calculations done by backend) ─────────────────────
 
@@ -115,9 +221,9 @@ class Bill(models.Model):
 
         return f"{prefix}{max_serial + 1:03d}"
 
-    def calculate_gst(self):
+    def calculate_gst(self, system_settings=None):
         """Calculate GST on rent based on tenant settings"""
-        gst_rate = self.tenant.get_gst_rate()
+        gst_rate = self.tenant.get_gst_rate(system_settings)
         if gst_rate > 0:
             total_gst = round(self.rent * gst_rate / 100, 2)
             if self.gst_treatment == 'igst':
@@ -165,9 +271,12 @@ class Bill(models.Model):
         today = timezone.localdate()
         return Bill.objects.filter(
             tenant=self.tenant,
+            allotment_id=self.allotment_id,
             status__in=['Unpaid', 'Partial'],
-            issue_date__isnull=False,
             due_date__lt=today,
+        ).filter(
+            models.Q(billing_policy='legacy_receipt', issue_date__isnull=False)
+            | models.Q(billing_policy='notices_368_369', raised_date__isnull=False)
         ).filter(
             models.Q(year__lt=self.year) |
             models.Q(year=self.year, month__lt=self.month)
@@ -189,13 +298,17 @@ class Bill(models.Model):
         Calculate penalty based on tenant-specific or system settings.
         Supports: percentage per annum, lumpsum, or none
         """
-        if not self.issue_date or self.status == 'Paid':
+        if self.penalty_start_date is None or self.status == 'Paid':
             return Decimal('0')
         if self.balance_due <= 0:
             return max(Decimal('0'), self.penalty_accrued - self.penalty_paid_after_start)
         return max(Decimal('0'), self.accrued_penalty(timezone.localdate()) - self.penalty_paid_after_start)
 
     def accrued_penalty(self, as_of):
+        if self.billing_policy == 'notices_368_369':
+            from ..estate.billing import notice_interest
+            return notice_interest(self.total_amount, self.penalty_start_date, as_of,
+                                   [(p.payment_date, p.amount) for p in self.payments.all()])
         start = self.penalty_start_date
         if start is None:
             return Decimal('0')
@@ -218,6 +331,8 @@ class Bill(models.Model):
     def penalty_paid_after_start(self):
         if self.penalty_start_date is None:
             return Decimal('0')
+        if self.billing_policy == 'notices_368_369':
+            return sum((p.penalty_paid for p in self.payments.all()), Decimal('0'))
         paid = getattr(self, '_penalty_paid', None)
         if paid is not None:
             return paid
@@ -227,6 +342,9 @@ class Bill(models.Model):
         start_date = self.penalty_start_date
         if start_date is None or balance <= 0 or as_of <= start_date:
             return Decimal('0')
+        if self.billing_policy == 'notices_368_369':
+            from ..estate.billing import notice_interest
+            return notice_interest(balance, start_date, as_of, [])
         days_overdue = (as_of - start_date).days
         penalty_config = penalty_config or self.tenant.get_penalty_config()
 
@@ -256,6 +374,13 @@ class Bill(models.Model):
 
     @property
     def penalty_calculation(self):
+        if self.billing_policy == 'notices_368_369':
+            start = self.penalty_start_date
+            return {'principal': str(self.balance_due), 'start_date': start.isoformat() if start else None,
+                    'days': self.days_overdue, 'type': 'percentage', 'frequency': 'year', 'rate': '12.00',
+                    'formula': '12% simple interest on dated unpaid principal segments, actual days / 365; final total rounded to two places.'
+                        if start else 'Confirmed email dispatch is required before late interest accrues.',
+                    'result': str(self.penalty)}
         if not self.issue_date:
             return {'principal': str(self.balance_due), 'start_date': None, 'days': 0,
                     'formula': 'Pending receipt confirmation; no late-payment penalty.', 'result': '0'}
@@ -307,10 +432,34 @@ class Bill(models.Model):
     @property
     def penalty_start_date(self):
         """Accrue only for days after the confirmed payment deadline."""
+        if self.billing_policy == 'notices_368_369':
+            return max(self.due_date, self.dispatch_day) if self.due_date and self.dispatch_day else None
         return self.due_date if self.issue_date else None
 
     @property
+    def dispatch_day(self):
+        return timezone.localtime(self.email_dispatched_at, ZoneInfo('Asia/Kolkata')).date() if self.email_dispatched_at else None
+
+    @property
+    def is_draft(self):
+        return self.billing_policy == 'notices_368_369' and not self.raised_date
+
+    @property
+    def confirmation_date(self):
+        return self.dispatch_day if self.billing_policy == 'notices_368_369' else self.issue_date
+
+    @property
+    def deadline_established(self):
+        return bool(self.due_date and (self.raised_date if self.billing_policy == 'notices_368_369' else self.issue_date))
+
+    @property
+    def payment_days_overdue(self):
+        return max(0, (timezone.localdate() - self.due_date).days) if self.deadline_established and self.status != 'Paid' else 0
+
+    @property
     def receipt_status(self):
+        if self.billing_policy == 'notices_368_369':
+            return 'Draft' if not self.raised_date else 'Email Dispatch Confirmed' if self.email_dispatched_at else 'Pending Email Dispatch'
         return 'Receipt Confirmed' if self.issue_date else 'Pending Receipt'
 
     def update_status(self):
@@ -332,10 +481,10 @@ class Bill(models.Model):
         penalty_paid = self.penalty_paid_after_start
         penalty_due = max(Decimal('0'), self.penalty_accrued - penalty_paid)
 
-        if paid <= 0:
-            self.status = 'Unpaid'
-        elif paid >= total and penalty_due <= 0:
+        if paid >= total and penalty_due <= 0:
             self.status = 'Paid'
+        elif paid <= 0:
+            self.status = 'Unpaid'
         else:
             self.status = 'Partial'
 
@@ -343,13 +492,46 @@ class Bill(models.Model):
 
     @transaction.atomic
     def save(self, *args, **kwargs):
-        previous = Bill.objects.filter(pk=self.pk).values('issue_date', 'due_date').first() if self.pk else None
+        inputs = ('rent', 'electric', 'water', 'gst_treatment', 'full_month_rent',
+                  'holiday_start_date', 'holiday_end_date', 'month', 'year')
+        policy_inputs = ('billing_policy', 'raised_date', 'email_dispatched_at', 'dispatch_recipient',
+                         'dispatch_message_reference', 'dispatch_sender_id')
+        rate_inputs = ('rent_revision_id', 'rate_snapshot', 'area_snapshot', 'rent_revision_reference',
+                       'rent_override_reason', 'rate_exception_reference')
+        taxes = ('gst_on_rent', 'cgst_on_rent', 'sgst_on_rent', 'igst_on_rent')
+        previous = Bill.objects.filter(pk=self.pk).values('issue_date', 'due_date', *inputs, *taxes, *policy_inputs, *rate_inputs).first() if self.pk else None
+        update_fields = kwargs.get('update_fields')
+        if previous and update_fields is not None:
+            for field in (*inputs, *policy_inputs, *rate_inputs):
+                if field not in update_fields and field.removesuffix('_id') not in update_fields:
+                    setattr(self, field, previous[field])
+        finalizing = previous is not None and previous['raised_date'] is None and self.raised_date is not None
+        period_changed = previous is not None and any(previous[key] != getattr(self, key) for key in ('year', 'month'))
+        if self.billing_policy == 'notices_368_369' and (finalizing or period_changed) and not self.rent_override_reason.strip():
+            self.full_month_rent = None
+        self.prepare_notice_rent(refresh=previous is None or finalizing or period_changed)
+        if (finalizing or period_changed) and update_fields is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | set(rate_inputs) | {'full_month_rent'}
+        if self.full_month_rent is not None:
+            from ..estate.billing import holiday_rent
+            result = holiday_rent(self.full_month_rent, self.year, self.month, self.holiday_start_date, self.holiday_end_date)
+            self.rent = result['applicable_rent']
+            self.holiday_closed_days = result['closed_days']
+            self.holiday_waiver = result['waiver_amount']
+        elif self.holiday_start_date or self.holiday_end_date:
+            raise ValidationError({'full_month_rent': 'Record the original full-month rent before applying holiday dates.'})
+        money_changed = previous is None or any(previous[field] != getattr(self, field) for field in inputs)
         if previous and kwargs.get('update_fields') is not None and 'issue_date' not in kwargs['update_fields']:
             self.issue_date = previous['issue_date']
         if self.issue_date and self.issue_date > timezone.localdate():
             raise ValidationError({'issue_date': 'Confirmed receipt date cannot be in the future.'})
         receipt_changed = previous is not None and previous['issue_date'] != self.issue_date
-        if self.issue_date:
+        policy_changed = previous is not None and any(previous[field] != getattr(self, field) for field in policy_inputs)
+        if self.billing_policy == 'notices_368_369':
+            self.due_date = self.raised_date + datetime.timedelta(days=7) if self.raised_date else None
+            if update_fields is not None:
+                kwargs['update_fields'] = set(kwargs['update_fields']) | {'due_date'}
+        elif self.issue_date:
             # Preserve earlier confirmed deadlines on unrelated edits.
             self.due_date = (self.issue_date + datetime.timedelta(days=5)
                              if previous is None or receipt_changed else previous['due_date'])
@@ -363,19 +545,23 @@ class Bill(models.Model):
             if update_fields is not None:
                 kwargs['update_fields'] = set(update_fields) | {'invoice_no'}
 
-        if not self.due_date:
+        if not self.due_date and self.billing_policy == 'legacy_receipt':
             base_date = self.issue_date or timezone.localdate()
             self.due_date = base_date + datetime.timedelta(days=5)
 
-        # Calculate and store GST before saving
-        gst_total, cgst, sgst, igst = self.calculate_gst()
-        self.gst_on_rent = gst_total
-        self.cgst_on_rent = cgst
-        self.sgst_on_rent = sgst
-        self.igst_on_rent = igst
+        self.clean()
+        if money_changed:
+            gst_total, cgst, sgst, igst = self.calculate_gst()
+            self.gst_on_rent, self.cgst_on_rent, self.sgst_on_rent, self.igst_on_rent = gst_total, cgst, sgst, igst
+        else:
+            for field in taxes:
+                setattr(self, field, previous[field])
+        if update_fields is not None and money_changed:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | set(taxes) | {
+                'rent', 'holiday_closed_days', 'holiday_waiver'}
 
         super().save(*args, **kwargs)
 
-        if receipt_changed:
+        if receipt_changed or money_changed or policy_changed:
             self.__dict__.pop('_penalty_paid', None)
             self.update_status()

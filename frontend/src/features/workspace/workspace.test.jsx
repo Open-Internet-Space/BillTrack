@@ -25,14 +25,16 @@ test.each([
 });
 
 test.each([false, true])("raising bills omits tentative due date (bulk: %s)", async bulk => {
-  const { container, close } = await signedInApp();
+  const { container, close } = await signedInApp(url => url.includes('/allotments/')
+    ? Promise.resolve({ ok: true, json: async () => [{ id: 1, tenant: 1, shop_code: 'A-101', start_date: '2020-01-01', end_date: '2100-12-31' }] })
+    : url.endsWith('/bills/preview/') ? Promise.resolve({ ok: true, json: async () => ({ months: [{ year: 2026, month: 1, already_exists: false }] }) }) : null);
   const button = text => [...container.querySelectorAll("button")].find(item => item.textContent === text);
   try {
     await act(async () => button("Bills").click());
-    act(() => button("+ Raise Bill").click());
+    await act(async () => button("+ Raise Bill").click());
     const dialog = container.querySelector("dialog");
     expect(dialog.textContent).not.toContain("Tentative Due Date");
-    expect(dialog.querySelector('input[type="date"]')).toBeNull();
+    expect(dialog.querySelector('#billform-due-date')).toBeNull();
     expect(dialog.textContent).toContain("Pending Receipt");
     if (bulk) {
       act(() => {
@@ -40,8 +42,9 @@ test.each([false, true])("raising bills omits tentative due date (bulk: %s)", as
         fillInput(dialog.querySelector("#billform-to-month"), "2026-02");
       });
     }
+    await act(async () => button('Preview monthly amounts').click());
     await act(async () => button("Raise Bill").click());
-    const post = global.fetch.mock.calls.find(([url, options]) => url.includes("/bills/") && options?.method === "POST");
+    const post = global.fetch.mock.calls.find(([url, options]) => url.includes("/bills/") && !url.endsWith('/preview/') && options?.method === "POST");
     expect(post).toBeDefined();
     expect(JSON.parse(post[1].body)).not.toHaveProperty("due_date");
   } finally { close(); }

@@ -23,7 +23,7 @@ Current configuration test: {% if verified %}accepted{% else %}not verified{% en
 <fieldset class="module">
 <h3><label><input type="checkbox" name="allottee" value="{{ group.uuid }}"> {{ group.allottee.display_name }} — {{ group.email }}</label></h3>
 <table><caption>Eligible outstanding bills</caption><thead><tr><th>Period / reference</th><th>Due date</th><th>Scheduled reminder</th><th>Principal</th><th>Penalty</th><th>Total (INR)</th></tr></thead>
-<tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
+<tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}{% if item.shop %}<br>{{ item.shop }} · {{ item.award }}{% endif %}{% if item.policy == 'notices_368_369' %}<br>Notice invoice · emailed {{ item.receipt_date }}{% endif %}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
 <p>Combined total: INR {{ group.total|floatformat:2 }}</p>
 </fieldset>
 {% empty %}<p>No reminders are currently eligible.</p>{% endfor %}

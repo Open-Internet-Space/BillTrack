@@ -11,48 +11,88 @@
         <select name="tenant" id="id_tenant" required>
           <option value="">---------</option>
           {% for tenant in tenants %}
-            <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+            <option value="{{ tenant.id }}" {% if data.tenant == tenant.id|stringformat:'s' %}selected{% endif %}>{{ tenant.name }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-row">
+        <label for="id_billing_category">Bill category:</label>
+        <select name="billing_category" id="id_billing_category">
+          <option value="allotment">Allotment</option>
+          <option value="other" {% if data.billing_category == 'other' %}selected{% endif %}>Other monthly charges (explain in notes)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="id_allotment">Shop allotment term:</label>
+        <select name="allotment" id="id_allotment">
+          <option value="">---------</option>
+          {% for term in allotments %}
+          <option value="{{ term.pk }}" {% if data.allotment == term.pk|stringformat:'s' %}selected{% endif %}>{{ term.shop.code }} — {{ term.tenant.name }} — {{ term.start_date }} to {{ term.effective_end }}</option>
+          {% endfor %}
+        </select>
+        <div class="help">The selected allottee and all billing months must match this term.</div>
+      </div>
+      <div class="form-row">
         <label class="required" for="id_from_period">From month:</label>
-        <input type="month" name="from_period" id="id_from_period" required>
+        <input type="month" name="from_period" id="id_from_period" value="{{ data.from_period }}" required>
       </div>
       <div class="form-row">
         <label class="required" for="id_to_period">To month:</label>
-        <input type="month" name="to_period" id="id_to_period" required>
+        <input type="month" name="to_period" id="id_to_period" value="{{ data.to_period }}" required>
       </div>
       <div class="form-row">
-        <label for="id_rent">Rent:</label>
-        <input type="number" step="0.01" name="rent" id="id_rent" value="0">
+        <label for="id_rent">Full-month rent before holiday waiver:</label>
+        <input type="number" min="0" step="0.01" name="full_month_rent" id="id_rent" value="{{ data.full_month_rent }}">
+        <div class="help">For notice-governed bills, leave empty to use each month's approved rate and measured area. A different amount requires a reviewed override reason.</div>
+      </div>
+      <div class="form-row">
+        <label for="id_raised_date">Notice invoice raised date:</label>
+        <input type="date" name="raised_date" id="id_raised_date" value="{{ data.raised_date }}">
+        <div class="help">Only for notice policy. Leave empty for a draft; a finalized invoice is due seven calendar days later.</div>
+      </div>
+      <div class="form-row">
+        <label for="id_rent_override">Reviewed rent override reason:</label>
+        <textarea name="rent_override_reason" id="id_rent_override" rows="2">{{ data.rent_override_reason }}</textarea>
+      </div>
+      <div class="form-row">
+        <label for="id_rate_exception">Approved rate exception reference:</label>
+        <input name="rate_exception_reference" id="id_rate_exception" value="{{ data.rate_exception_reference }}">
+      </div>
+      <div class="form-row">
+        <label for="id_holiday_start">Holiday start:</label>
+        <input type="date" name="holiday_start_date" id="id_holiday_start" value="{{ data.holiday_start_date }}">
+      </div>
+      <div class="form-row">
+        <label for="id_holiday_end">Holiday end:</label>
+        <input type="date" name="holiday_end_date" id="id_holiday_end" value="{{ data.holiday_end_date }}">
+        <div class="help">Optional; both dates included. Rent is prorated by each month's actual calendar days; utilities remain unchanged.</div>
       </div>
       <div class="form-row">
         <label for="id_water">Water:</label>
-        <input type="number" step="0.01" name="water" id="id_water" value="0">
+        <input type="number" min="0" step="0.01" name="water" id="id_water" value="{{ data.water|default:'0' }}">
       </div>
       <div class="form-row">
         <label for="id_gst_treatment">GST type:</label>
         <select name="gst_treatment" id="id_gst_treatment">
           {% for value, label in gst_choices %}
-            <option value="{{ value }}">{{ label }}</option>
+            <option value="{{ value }}" {% if data.gst_treatment == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
       </div>
       <div class="form-row">
-        <label class="required" for="id_due_date">Due date:</label>
-        <input type="date" name="due_date" id="id_due_date" required>
-        <div class="help">This same due date will be used for every generated bill.</div>
+        <label for="id_due_date">Legacy tentative due date:</label>
+        <input type="date" name="due_date" id="id_due_date" value="{{ data.due_date }}">
+        <div class="help">Optional legacy value only. The notice-policy deadline is calculated from the raised date.</div>
       </div>
       <div class="form-row">
         <label for="id_notes">Notes:</label>
-        <textarea name="notes" id="id_notes" rows="3"></textarea>
+        <textarea name="notes" id="id_notes" rows="3">{{ data.notes }}</textarea>
       </div>
     </fieldset>
 
     <fieldset class="module">
       <h2>Month-wise electricity</h2>
-      <div class="help" style="margin: 8px 0 12px;">Rent and water are common for all months. Enter electricity amount and reading separately for each month.</div>
+      <div class="help" style="margin: 8px 0 12px;">Full-month rent and water are common. Holiday waivers are calculated month-wise. Enter electricity amount and reading separately for each month.</div>
       <table id="electricity-table" style="width:100%;">
         <thead>
           <tr>
@@ -74,11 +114,13 @@
   </form>
 </div>
 
+{{ electric_values|json_script:'electric-values' }}
 <script>
 (function () {
   const fromInput = document.getElementById("id_from_period");
   const toInput = document.getElementById("id_to_period");
   const tbody = document.querySelector("#electricity-table tbody");
+  const savedValues = JSON.parse(document.getElementById('electric-values').textContent);
 
   function parsePeriod(value) {
     const parts = String(value || "").split("-").map(Number);
@@ -96,11 +138,12 @@
 
     const start = from.year * 12 + from.month;
     const end = to.year * 12 + to.month;
-    if (end < start) {
-      tbody.innerHTML = '<tr><td colspan="3">To month must be after from month.</td></tr>';
+    if (end < start || end - start + 1 > 36) {
+      tbody.innerHTML = '<tr><td colspan="3">Choose an ordered range of at most 36 months.</td></tr>';
       return;
     }
 
+    tbody.querySelectorAll('input').forEach(input => { savedValues[input.name] = input.value; });
     let html = "";
     for (let index = start; index <= end; index += 1) {
       const year = Math.floor((index - 1) / 12);
@@ -115,10 +158,14 @@
         </tr>`;
     }
     tbody.innerHTML = html;
+    tbody.querySelectorAll('input').forEach(input => {
+      if (Object.hasOwn(savedValues, input.name)) input.value = savedValues[input.name];
+    });
   }
 
   fromInput.addEventListener("change", renderRows);
   toInput.addEventListener("change", renderRows);
+  renderRows();
 })();
 </script>
 {% endblock %}

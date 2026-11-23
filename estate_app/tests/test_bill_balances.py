@@ -145,6 +145,8 @@ class BillPreviousDuesTests(TestCase):
             '/api/bills/bulk-create/',
             data={
                 'tenant': self.tenant.id,
+                'billing_category': 'other',
+                'notes': 'Reviewed non-shop charge',
                 'from_month': 1,
                 'from_year': 2026,
                 'to_month': 2,

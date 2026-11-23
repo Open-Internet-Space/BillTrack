@@ -17,6 +17,9 @@ Superuser corrections and retained before/after snapshots: [Activity log](ACTIVI
 
 ## Use BillTrack
 
+- [Estate staff workflow](ESTATE-WORKFLOW.md) and [estate API](ESTATE-API.md). The sidebar **Knowledge Base** lists the staff guides.
+- [Changelog](../CHANGELOG.md).
+
 - [Invoice settings](INVOICES-AND-SETTINGS.md), [receipt billing](RECEIPT-BILLING.md), [reports](REPORTS.md) and [lists and filters](LISTS-AND-FILTERS.md).
 - [Manual email drafts](EMAIL-DRAFTS.md) and [email reminders](EMAIL-REMINDERS.md).
 - [Accounts](EMAIL-ACCOUNTS.md), [personal authenticator recovery](TOTP-RECOVERY.md) and [superuser emergency recovery](SUPERUSER-EMERGENCY-TOTP.md).

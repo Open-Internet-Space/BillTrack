@@ -63,6 +63,8 @@ Run `python scripts/build_component_map.py` after editing the registry; use `--c
 - [Component registry and generated guides](#modification-guide)
 - [Private organisation profile and invoice readiness](#private-configuration)
 - [Email templates and manual Mail Merge](#email-drafts)
+- [Shops, allotment terms and physical occupancy](#estate)
+- [Knowledge Base](#knowledge)
 
 ## I want to change…
 
@@ -334,12 +336,19 @@ Bills composes its filter/table blocks and owns selections, refresh, delete and 
 | [estate_app/models/billing.py](../estate_app/models/billing.py) | `Bill`, `Bill.calculate_gst`, `Bill.total_amount`, `Bill.balance_due`, `Bill.previous_balance`, `Bill.penalty_for`, `Bill.receipt_status`, `Bill.save` | Stored bill fields, invoice numbering, GST, dues, penalties, receipt deadlines and save behavior. |
 | [estate_app/views/bills.py](../estate_app/views/bills.py) | `bill_read_queryset`, `BillViewSet` | Bill CRUD, read query optimization and single/bulk creation API. |
 | [frontend/src/features/bills/Bills.jsx](../frontend/src/features/bills/Bills.jsx) | `Bills` | Bills composes its filter/table blocks and owns selections, refresh, delete and authorized printing. Model methods own GST, penalty, previous dues and receipt deadlines. |
+| [estate_app/estate/billing.py](../estate_app/estate/billing.py) | `holiday_rent`, `annual_revisions`, `rent_schedule`, `notice_interest` | Inclusive actual-calendar-day Decimal rent waivers shared by validation, saves and imports. |
+| [estate_app/migrations/0008_holiday_rent_evidence.py](../estate_app/migrations/0008_holiday_rent_evidence.py) | `Migration` | Additive original-rent/holiday evidence with historical audit guards retained. |
+| [estate_app/migrations/0009_link_bill_allotment.py](../estate_app/migrations/0009_link_bill_allotment.py) | `Migration` | Protected term identity, explicit legacy category and conditional monthly uniqueness. |
+| [frontend/src/features/bills/billing.css](../frontend/src/features/bills/billing.css) |  | Responsive monthly rent previews and one-column phone bill forms. |
+| [estate_app/migrations/0011_notice_bill_dates.py](../estate_app/migrations/0011_notice_bill_dates.py) | `Migration` | Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation. |
+| [estate_app/migrations/0012_bill_rate_snapshots.py](../estate_app/migrations/0012_bill_rate_snapshots.py) | `Migration` | Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation. |
+| [estate_app/migrations/0013_notice_bill_guards.py](../estate_app/migrations/0013_notice_bill_guards.py) | `Migration` | Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation. |
 
 **Settings first:** Billing parameters and system GST/penalty settings are data, not template constants.
 
 **Keep in mind:** Keep calculations in Python. Receipt confirmation starts the existing five-day deadline; preserve money precision and historical invoice numbers.
 
-**Verify:** [frontend/src/features/bills/bills.test.jsx](../frontend/src/features/bills/bills.test.jsx), [estate_app/tests/test_bill_balances.py](../estate_app/tests/test_bill_balances.py), [estate_app/tests/test_receipts.py](../estate_app/tests/test_receipts.py), [estate_app/tests/test_bill_performance.py](../estate_app/tests/test_bill_performance.py).
+**Verify:** [frontend/src/features/bills/bills.test.jsx](../frontend/src/features/bills/bills.test.jsx), [estate_app/tests/test_bill_balances.py](../estate_app/tests/test_bill_balances.py), [estate_app/tests/test_receipts.py](../estate_app/tests/test_receipts.py), [estate_app/tests/test_bill_performance.py](../estate_app/tests/test_bill_performance.py), [estate_app/tests/test_holiday_rent.py](../estate_app/tests/test_holiday_rent.py), [estate_app/tests/test_estate_billing.py](../estate_app/tests/test_estate_billing.py), [estate_app/tests/test_notice_billing.py](../estate_app/tests/test_notice_billing.py).
 
 <a id="bill-list-blocks"></a>
 ## Bill filters, columns and row actions
@@ -448,7 +457,7 @@ React controls filters/preview/columns; reports.py builds historical rows and si
 
 **Keep in mind:** Historical reports reconstruct current records; preserve snapshot validation, cutoff semantics, matching export rows and money precision.
 
-**Verify:** [frontend/src/features/reports/Reports.test.jsx](../frontend/src/features/reports/Reports.test.jsx), [estate_app/tests/test_reports.py](../estate_app/tests/test_reports.py).
+**Verify:** [frontend/src/features/reports/Reports.test.jsx](../frontend/src/features/reports/Reports.test.jsx), [estate_app/tests/test_reports.py](../estate_app/tests/test_reports.py), [estate_app/tests/test_estate_reporting.py](../estate_app/tests/test_estate_reporting.py).
 
 <a id="invoices"></a>
 ## Invoice rendering chain
@@ -752,12 +761,16 @@ Serialization validates portable JSON, restoration applies merge/replace, and vi
 | [estate_app/data_transfer/serialization.py](../estate_app/data_transfer/serialization.py) | `export_data`, `export_bytes`, `validate_data` | Export JSON schema, limits, identity mapping and incoming data/logo validation. |
 | [estate_app/data_transfer/views.py](../estate_app/data_transfer/views.py) | `ImportForm`, `check_superuser`, `export_view`, `transfer_view`, `backup_view` | Import form, authorization, confirmation, transaction and private safety-download views. |
 | [estate_app/templates/admin/data_transfer.html](../estate_app/templates/admin/data_transfer.html) |  | Serialization validates portable JSON, restoration applies merge/replace, and views/forms enforce access and expose safety downloads. |
+| [estate_app/data_transfer/graph.py](../estate_app/data_transfer/graph.py) | `validate_graph`, `require` | Validate both incoming records and the combined retained and imported estate graph. |
+| [estate_app/estate/legacy.py](../estate_app/estate/legacy.py) | `LegacyReviewForm`, `legacy_preview`, `legacy_confirm` | Reviewed historical bill assignment and separate billing policy conversion. |
+| [estate_app/templates/admin/estate_app/bill/legacy_review.html](../estate_app/templates/admin/estate_app/bill/legacy_review.html) |  | Compare historical dates, amounts and retained receipts before confirmation. |
+| [estate_app/templates/admin/estate_app/bill/change_form.html](../estate_app/templates/admin/estate_app/bill/change_form.html) |  | Open the superuser historical bill review. |
 
 **Settings first:** No administrator setting; edit the indicated source.
 
 **Keep in mind:** Preserve version/size validation, superuser authorization, confirmation, transaction rollback, UUID merge identity and private safety backups.
 
-**Verify:** [estate_app/tests/test_data_transfer.py](../estate_app/tests/test_data_transfer.py).
+**Verify:** [estate_app/tests/test_data_transfer.py](../estate_app/tests/test_data_transfer.py), [estate_app/tests/test_estate_transfer.py](../estate_app/tests/test_estate_transfer.py), [estate_app/tests/test_legacy_review.py](../estate_app/tests/test_legacy_review.py).
 
 <a id="api"></a>
 ## API routes and validation
@@ -875,7 +888,7 @@ Backend tests are grouped under estate_app/tests; frontend tests sit beside feat
 
 **Keep in mind:** Run against isolated test databases; do not load sample data or reset a real password in the daily-work installation.
 
-**Verify:** [estate_app/tests/test_allottees.py](../estate_app/tests/test_allottees.py), [estate_app/tests/test_bill_balances.py](../estate_app/tests/test_bill_balances.py), [estate_app/tests/test_bill_performance.py](../estate_app/tests/test_bill_performance.py), [estate_app/tests/test_data_transfer.py](../estate_app/tests/test_data_transfer.py), [estate_app/tests/test_errors.py](../estate_app/tests/test_errors.py), [estate_app/tests/test_filters.py](../estate_app/tests/test_filters.py), [estate_app/tests/test_invoice_selection.py](../estate_app/tests/test_invoice_selection.py), [estate_app/tests/test_invoice_settings.py](../estate_app/tests/test_invoice_settings.py), [estate_app/tests/test_pagination.py](../estate_app/tests/test_pagination.py), [estate_app/tests/test_production.py](../estate_app/tests/test_production.py), [estate_app/tests/test_receipts.py](../estate_app/tests/test_receipts.py), [estate_app/tests/test_reports.py](../estate_app/tests/test_reports.py), [estate_app/tests/test_totp_recovery.py](../estate_app/tests/test_totp_recovery.py), [frontend/src/ErrorBoundary.test.jsx](../frontend/src/ErrorBoundary.test.jsx), [frontend/src/Pagination.test.jsx](../frontend/src/Pagination.test.jsx), [frontend/src/api.test.js](../frontend/src/api.test.js), [frontend/src/features/allottees/allottees.test.jsx](../frontend/src/features/allottees/allottees.test.jsx), [frontend/src/features/auth/auth.test.jsx](../frontend/src/features/auth/auth.test.jsx), [frontend/src/features/bills/bills.test.jsx](../frontend/src/features/bills/bills.test.jsx), [frontend/src/features/dashboard/dashboard.test.jsx](../frontend/src/features/dashboard/dashboard.test.jsx), [frontend/src/features/payments/payments.test.jsx](../frontend/src/features/payments/payments.test.jsx), [frontend/src/features/penalties/penalties.test.jsx](../frontend/src/features/penalties/penalties.test.jsx), [frontend/src/features/reports/Reports.test.jsx](../frontend/src/features/reports/Reports.test.jsx), [frontend/src/features/workspace/workspace.test.jsx](../frontend/src/features/workspace/workspace.test.jsx).
+**Verify:** [estate_app/tests/test_allottees.py](../estate_app/tests/test_allottees.py), [estate_app/tests/test_bill_balances.py](../estate_app/tests/test_bill_balances.py), [estate_app/tests/test_bill_performance.py](../estate_app/tests/test_bill_performance.py), [estate_app/tests/test_data_transfer.py](../estate_app/tests/test_data_transfer.py), [estate_app/tests/test_errors.py](../estate_app/tests/test_errors.py), [estate_app/tests/test_filters.py](../estate_app/tests/test_filters.py), [estate_app/tests/test_invoice_selection.py](../estate_app/tests/test_invoice_selection.py), [estate_app/tests/test_invoice_settings.py](../estate_app/tests/test_invoice_settings.py), [estate_app/tests/test_pagination.py](../estate_app/tests/test_pagination.py), [estate_app/tests/test_production.py](../estate_app/tests/test_production.py), [estate_app/tests/test_receipts.py](../estate_app/tests/test_receipts.py), [estate_app/tests/test_reports.py](../estate_app/tests/test_reports.py), [estate_app/tests/test_totp_recovery.py](../estate_app/tests/test_totp_recovery.py), [frontend/src/ErrorBoundary.test.jsx](../frontend/src/ErrorBoundary.test.jsx), [frontend/src/Pagination.test.jsx](../frontend/src/Pagination.test.jsx), [frontend/src/api.test.js](../frontend/src/api.test.js), [frontend/src/features/allottees/allottees.test.jsx](../frontend/src/features/allottees/allottees.test.jsx), [frontend/src/features/auth/auth.test.jsx](../frontend/src/features/auth/auth.test.jsx), [frontend/src/features/bills/bills.test.jsx](../frontend/src/features/bills/bills.test.jsx), [frontend/src/features/dashboard/dashboard.test.jsx](../frontend/src/features/dashboard/dashboard.test.jsx), [frontend/src/features/payments/payments.test.jsx](../frontend/src/features/payments/payments.test.jsx), [frontend/src/features/penalties/penalties.test.jsx](../frontend/src/features/penalties/penalties.test.jsx), [frontend/src/features/reports/Reports.test.jsx](../frontend/src/features/reports/Reports.test.jsx), [frontend/src/features/workspace/workspace.test.jsx](../frontend/src/features/workspace/workspace.test.jsx), [estate_app/tests/test_estate_reporting.py](../estate_app/tests/test_estate_reporting.py).
 
 <a id="modification-guide"></a>
 ## Component registry and generated guides
@@ -886,6 +899,8 @@ Edit component-map.json, then run the standard-library generator. Check mode val
 | --- | --- | --- |
 | [docs/component-map.json](../docs/component-map.json) |  | Single maintained component hierarchy, file roles, symbols, cautions and modification recipes. |
 | [scripts/build_component_map.py](../scripts/build_component_map.py) | `source_path`, `symbols_in`, `load_registry`, `tree_lines`, `render_markdown`, `render_html`, `generate` | Registry validation and deterministic Markdown/HTML generation. |
+| [docs/COMPONENT-MAP.md](../docs/COMPONENT-MAP.md) |  | Generated linked modification guide for GitHub/editor reading. |
+| [docs/component-map.html](../docs/component-map.html) |  | Generated searchable, collapsible local HTML modification guide. |
 
 **Settings first:** No administrator setting; edit the indicated source.
 
@@ -1056,3 +1071,59 @@ Required correction reasons, signed cascade previews, immutable allowlisted SQLi
 **Keep in mind:** Preserve secret allowlists, immutable evidence, payment recalculation and independent reminder protection. Do not downgrade source alone.
 
 **Verify:** [estate_app/tests/test_activity.py](../estate_app/tests/test_activity.py), [estate_app/tests/transaction_case.py](../estate_app/tests/transaction_case.py).
+
+<a id="estate"></a>
+## Shops, allotment terms and physical occupancy
+
+Shop identity, allotment and renewal history, compliance, billing, charges, deposits and expiry attention.
+
+| File | Named parts | What to change here |
+| --- | --- | --- |
+| [estate_app/models/estate.py](../estate_app/models/estate.py) | `Shop`, `Allotment`, `AllotmentRequirement`, `calendar_months`, `yearly_end` | Validated estate domain records; SQLite serialization precedes overlap validation. |
+| [estate_app/migrations/0006_estate_records.py](../estate_app/migrations/0006_estate_records.py) | `Migration`, `rebuild_audit` | Additive estate schema and audit-trigger refresh; does not infer or create live shop awards. |
+| [estate_app/migrations/0007_original_award_reference.py](../estate_app/migrations/0007_original_award_reference.py) | `Migration` | Prevent duplicate original award references for a shop. |
+| [estate_app/estate/__init__.py](../estate_app/estate/__init__.py) |  | Estate feature package. |
+| [estate_app/estate/api.py](../estate_app/estate/api.py) | `ShopSerializer`, `AllotmentSerializer`, `RequirementSerializer`, `EstateViewSet`, `ShopViewSet`, `AllotmentViewSet`, `RequirementViewSet`, `EstateAttentionView`, `allotment_queryset`, `RentRevisionSerializer`, `RentRevisionViewSet` | Authenticated audited CRUD and paginated administrative attention; model validation is shared with Admin. |
+| [estate_app/admin/estate.py](../estate_app/admin/estate.py) | `ShopAdmin`, `AllotmentAdmin`, `RequirementAdmin`, `RentRevisionAdmin` | Estate Admin searches, protected history and server-owned document verifier identity. |
+| [frontend/src/features/estate/EstatePage.jsx](../frontend/src/features/estate/EstatePage.jsx) | `EstatePage` | Searchable shop/term tables, history/details, contractual versus physical status and evidence navigation. |
+| [frontend/src/features/estate/EstateForms.jsx](../frontend/src/features/estate/EstateForms.jsx) | `ShopForm`, `AllotmentForm`, `RequirementForm`, `RentRevisionForm` | Accessible record, renewal and evidence forms integrated with the shared save/error modal. |
+| [frontend/src/features/estate/EstateAttention.jsx](../frontend/src/features/estate/EstateAttention.jsx) | `EstateAttention`, `attentionLabel` | Dashboard estate actions with business as-of date, pagination and direct record navigation. |
+| [frontend/src/features/estate/estate.css](../frontend/src/features/estate/estate.css) |  | Estate table/form/detail styling and dashboard space for attention without clipping collection lists. |
+| [estate_app/models/rates.py](../estate_app/models/rates.py) | `RentRevision` | Reviewed original-award rent schedules, annual progression and protection of billed rates. |
+| [estate_app/migrations/0010_reviewed_rent_schedule.py](../estate_app/migrations/0010_reviewed_rent_schedule.py) | `Migration` | Add rate schedule with unique effective dates and retained audit guards. |
+| [estate_app/models/charges.py](../estate_app/models/charges.py) | `EstateCharge`, `EstateChargePayment` | Validated assessed obligations and dated receipts; serialized balances and protected renewal fee history. |
+| [estate_app/estate/charges.py](../estate_app/estate/charges.py) | `EstateChargeSerializer`, `ChargePaymentSerializer`, `EstateChargeViewSet`, `ChargePaymentViewSet`, `charge_queryset`, `charge_fingerprint`, `prepare_charge_decision`, `ChargeDecisionInput`, `ChargeConfirmationInput` | Audited charge APIs and signed, actor-bound, stale-safe financial decision review. |
+| [estate_app/admin/charges.py](../estate_app/admin/charges.py) | `EstateChargeAdmin`, `EstateChargePaymentAdmin` | Charge assessment and receipt administration; financial decisions remain read-only. |
+| [estate_app/migrations/0014_assessed_estate_charges.py](../estate_app/migrations/0014_assessed_estate_charges.py) | `Migration` | Add charges/receipts with audit guards; no inferred live obligations. |
+| [frontend/src/features/estate/EstateCharges.jsx](../frontend/src/features/estate/EstateCharges.jsx) | `EstateCharges`, `ChargeForm`, `ChargePaymentForm`, `ChargeDecisionForm` | Term-scoped assessments, receipts and signed superuser decision review. |
+| [estate_app/estate/security.py](../estate_app/estate/security.py) | `required_security`, `validate_security_requirement`, `validate_security_pair` | Security requirement calculation and shared validation for paired deposit settlements. |
+| [estate_app/models/security.py](../estate_app/models/security.py) | `SecurityMovement`, `SecurityMovementQuerySet` | Append-only original-award security liability movements with current/historical held-balance validation. |
+| [estate_app/migrations/0015_security_liability.py](../estate_app/migrations/0015_security_liability.py) | `Migration` | Add empty reviewed requirement fields and security movement records with audit guards. |
+| [estate_app/migrations/0016_security_payment_sources.py](../estate_app/migrations/0016_security_payment_sources.py) | `Migration` | Label old payments as receipts and add unique paired settlement IDs with retained audit guards. |
+| [estate_app/estate/security_api.py](../estate_app/estate/security_api.py) | `SecurityMovementSerializer`, `SecurityMovementViewSet`, `SecurityAccountSerializer`, `SecurityAccountViewSet`, `SecurityDecisionInput`, `SecurityConfirmationInput`, `security_summary`, `refund_issues`, `security_fingerprint`, `prepare_security_decision` | Audited receipt API and signed current-evidence requirement, refund, application and forfeiture actions; no external payment. |
+| [estate_app/admin/security.py](../estate_app/admin/security.py) | `SecurityMovementAdmin` | Actual security receipts and read-only movement history in Admin. |
+| [estate_app/migrations/0017_security_decision_operation.py](../estate_app/migrations/0017_security_decision_operation.py) | `Migration` | Store the unique latest reviewed requirement operation for safe confirmation retries. |
+| [frontend/src/features/estate/EstateSecurity.jsx](../frontend/src/features/estate/EstateSecurity.jsx) | `EstateSecurity`, `SecurityReceiptForm`, `SecurityDecisionForm` | Original-award deposit liability, actual receipts and signed financial review forms with fresh eligible debts. |
+
+**Settings first:** Server business date uses Asia/Kolkata. See docs/ESTATE-WORKFLOW.md for staff procedures.
+
+**Keep in mind:** Contract expiry is separate from physical vacancy. Preserve protected financial ownership, renewal lineage and explicit approval. Deposit settlement and complete estate restore remain in the sequential implementation ledger.
+
+**Verify:** [estate_app/tests/test_estate.py](../estate_app/tests/test_estate.py), [estate_app/tests/test_estate_api.py](../estate_app/tests/test_estate_api.py), [frontend/src/features/estate/estate.test.jsx](../frontend/src/features/estate/estate.test.jsx), [estate_app/tests/test_notice_billing.py](../estate_app/tests/test_notice_billing.py), [estate_app/tests/test_estate_charges.py](../estate_app/tests/test_estate_charges.py), [frontend/src/features/estate/charges.test.jsx](../frontend/src/features/estate/charges.test.jsx), [estate_app/tests/test_estate_security.py](../estate_app/tests/test_estate_security.py), [frontend/src/features/estate/security.test.jsx](../frontend/src/features/estate/security.test.jsx).
+
+<a id="knowledge"></a>
+## Knowledge Base
+
+Search and read existing staff guides inside BillTrack.
+
+| File | Named parts | What to change here |
+| --- | --- | --- |
+| [frontend/scripts/build-knowledge-base.cjs](../frontend/scripts/build-knowledge-base.cjs) |  | Allowlisted documentation catalog and Markdown rendering at frontend build time. |
+| [frontend/src/features/knowledge/KnowledgeBase.jsx](../frontend/src/features/knowledge/KnowledgeBase.jsx) | `KnowledgeBase` | Searchable guide index, article reader and links between guides. |
+| [frontend/src/features/knowledge/knowledge.css](../frontend/src/features/knowledge/knowledge.css) |  | Responsive index and article styles. |
+
+**Settings first:** Edit the documents in docs/ and rebuild the frontend.
+
+**Keep in mind:** Only include guides intended for staff. Guides are bundled with the frontend.
+
+**Verify:** [frontend/src/features/knowledge/knowledge.test.jsx](../frontend/src/features/knowledge/knowledge.test.jsx).

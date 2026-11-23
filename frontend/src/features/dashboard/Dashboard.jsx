@@ -2,35 +2,35 @@ import Pagination, { usePagination } from "../../Pagination";
 import RefreshButton from "../../RefreshButton";
 import { formatCurrency, formatDate } from "../../shared/format.js";
 
-export function Dashboard({ stats, bills, tenants, onOpenBills, refresh, refreshing }) {
+export function Dashboard({ stats, bills, tenants, onOpenBills, refresh, refreshing, estateAttention }) {
   const billed = Number(stats.total_billed || 0);
   const collected = Number(stats.total_collected || 0);
   const outstanding = Number(stats.total_outstanding || 0);
   const penalty = Number(stats.total_penalty || 0);
   const collectionRate = billed ? Math.min(100, Math.round(collected / billed * 100)) : 0;
   const statCards = [
-    { label: "Total billed", value: formatCurrency(billed), color: "#60a5fa", note: "Across all bills" },
-    { label: "Collected", value: formatCurrency(collected), color: "#22c55e", note: `${collectionRate}% of total billed` },
+    { label: "Total billed", value: formatCurrency(billed), color: "#60a5fa", note: "Bills and one-off assessments" },
+    { label: "Collected", value: formatCurrency(collected), color: "#22c55e", note: `${collectionRate}% · cash principal receipts` },
     { label: "Outstanding", value: formatCurrency(outstanding + penalty), color: "#f87171", note: `${formatCurrency(penalty)} penalty included` },
     { label: "Pending bills", value: Number(stats.unpaid_count || 0) + Number(stats.partial_count || 0), color: "#f0a500", note: `${stats.unpaid_count || 0} unpaid · ${stats.partial_count || 0} partial` },
   ];
-  const overdueVendors = Object.values(bills.filter(b => Number(b.days_overdue) > 0 && b.status !== "Paid").reduce((groups, b) => {
+  const overdueVendors = Object.values(bills.filter(b => Number(b.payment_days_overdue ?? b.days_overdue) > 0 && b.status !== "Paid").reduce((groups, b) => {
     const vendor = groups[b.tenant] ||= { ...b, bill_count: 0, balance_due: 0, penalty: 0, days_overdue: 0 };
     vendor.bill_count++;
     vendor.balance_due += Number(b.balance_due || 0);
     vendor.penalty += Number(b.penalty || 0);
-    vendor.days_overdue = Math.max(vendor.days_overdue, Number(b.days_overdue || 0));
+    vendor.days_overdue = Math.max(vendor.days_overdue, Number(b.payment_days_overdue ?? b.days_overdue ?? 0));
     return groups;
   }, {})).sort((a, b) => b.days_overdue - a.days_overdue);
   const overduePagination = usePagination(overdueVendors);
   const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const upcomingBills = bills.filter(b => b.issue_date && b.status !== "Paid" && b.due_date && b.due_date >= today)
+  const today = stats.as_of || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const upcomingBills = bills.filter(b => (b.deadline_established ?? Boolean(b.issue_date)) && b.status !== "Paid" && b.due_date && b.due_date >= today)
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
   const upcomingPagination = usePagination(upcomingBills);
 
   return (
-    <div className="dashboard-page">
+    <div className={`dashboard-page${estateAttention ? ' dashboard-with-estate' : ''}`}>
       <div className="page-toolbar" style={{ display: "flex", justifyContent: "space-between", alignItems: "end", marginBottom: 24 }}>
         <h1 className="page-title">Dashboard</h1>
         <div className="toolbar-actions" style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -45,6 +45,9 @@ export function Dashboard({ stats, bills, tenants, onOpenBills, refresh, refresh
           <div className="metric-note">{s.note}</div>
         </div>)}
       </div>
+      {estateAttention}
+      {stats.charge_summary && <p className="payment-guidance">Included above: one-off assessments {formatCurrency(stats.charge_summary.assessed)} · Cash receipts {formatCurrency(stats.charge_summary.paid)} · Security applied {formatCurrency(stats.charge_summary.applied||0)} · Waivers {formatCurrency(stats.charge_summary.waived)} · Outstanding {formatCurrency(stats.charge_summary.outstanding)} ({stats.charge_summary.overdue_count} overdue).</p>}
+      {stats.security_summary && <p className="payment-guidance">Security liability, separate from collections: received {formatCurrency(stats.security_summary.received)} · Held {formatCurrency(stats.security_summary.held)} · Refunded {formatCurrency(stats.security_summary.refunded)} · Applied {formatCurrency(stats.security_summary.applied)} · Forfeited {formatCurrency(stats.security_summary.forfeited)}.</p>}
       <div className="dashboard-sections">
         <div className="card collection-summary">
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}><strong style={{ fontSize: 16, fontWeight: 600 }}>Collection progress</strong><span style={{ color: "#22c55e", fontFamily: "'JetBrains Mono',monospace" }}>{collectionRate}%</span></div>

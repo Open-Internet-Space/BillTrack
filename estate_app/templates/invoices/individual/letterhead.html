@@ -1,4 +1,5 @@
   <!-- ── HEADER ── -->
+  {% if bill.is_draft or invoice_is_draft %}<div class="copy-band">DRAFT — NOT RAISED · PROPOSED AMOUNTS ONLY</div>{% endif %}
   <div class="inv-header">
     <div class="logo-box"><img src="{{ invoice_logo }}" alt="Letterhead logo"></div>
     <div class="org-block">

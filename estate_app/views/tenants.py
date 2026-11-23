@@ -20,11 +20,11 @@ class TenantViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         tenant = self.get_object()
-        if tenant.bills.exists():
+        if tenant.bills.exists() or tenant.allotments.exists():
             tenant.active = False
             tenant.save()
             return Response({
-                'message': 'Allottee deactivated (has billing history)',
+                'message': 'Allottee deactivated (has billing or allotment history)',
                 'soft_delete': True
             })
         return super().destroy(request, *args, **kwargs)

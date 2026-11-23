@@ -1,5 +1,7 @@
 # BillTrack
 
+Estate management, shop-wise billing and staff guides: see the [changelog](CHANGELOG.md) and [estate workflow](docs/ESTATE-WORKFLOW.md).
+
 Superuser corrections and retained before/after snapshots: [Activity log](docs/ACTIVITY-HISTORY.md).
 
 Every bill. Every payment. In view.

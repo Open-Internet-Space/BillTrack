@@ -26,7 +26,7 @@ export function AdjustmentBill({ bill, splits, allSplits, resetKey }) {
       <tbody>{pagination.pageRows.map(p => <tr key={p.id} className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
         <td style={{ padding: "10px 14px" }}>{allSplits.indexOf(p) + 1} of {allSplits.length}</td>
         <td style={{ padding: "10px 14px" }}>{formatDate(p.payment_date)}</td>
-        <td style={{ padding: "10px 14px" }}>{p.receipt_no || "—"}</td>
+        <td style={{ padding: "10px 14px" }}>{p.receipt_no || "—"}<small>{p.source==='security_application'?'Security application — no new cash receipt':'Receipt'}</small></td>
         <td style={{ padding: "10px 14px" }}>{formatCurrency(p.amount)}</td>
         <td style={{ padding: "10px 14px" }}>{formatCurrency(p.penalty_paid)}</td>
       </tr>)}</tbody>

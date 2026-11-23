@@ -70,7 +70,7 @@ class AdminDataTransferTests(TestCase):
     def test_export_is_complete_but_excludes_credentials(self):
         data = self.export()
         self.assertEqual(data['format'], 'billtrack-data')
-        self.assertEqual(data['version'], 1)
+        self.assertEqual(data['version'], 2)
         self.assertEqual({row['model'] for row in data['records']}, {
             'estate_app.tenant', 'estate_app.bill', 'estate_app.payment', 'estate_app.systemsettings',
         })
@@ -84,6 +84,25 @@ class AdminDataTransferTests(TestCase):
         Bill.objects.filter(pk=self.bill.pk).update(invoice_no=number)
         self.assertContains(self.upload(self.export(), 'replace'), 'Import completed')
         self.assertEqual(Bill.objects.get(tenant__uuid=self.tenant.uuid).invoice_no, number)
+
+    def test_version_1_without_new_policy_or_settlement_fields_still_restores_as_legacy(self):
+        data=self.export()
+        data['version']=1
+        for row in data['records']:
+            if row['model']=='estate_app.payment':
+                row['fields'].pop('source');row['fields'].pop('operation_id')
+            if row['model']=='estate_app.bill':
+                for key in ('billing_policy','allotment','billing_category','rent_revision','raised_date',
+                            'email_dispatched_at','dispatch_sender','rate_snapshot','area_snapshot',
+                            'dispatch_recipient','dispatch_message_reference','rent_revision_reference',
+                            'rent_override_reason','rate_exception_reference'):
+                    row['fields'].pop(key)
+        self.assertContains(self.upload(data,'replace'),'Import completed')
+        restored=Bill.objects.get(tenant__uuid=self.tenant.uuid)
+        self.assertIsNone(restored.allotment_id)
+        self.assertEqual(restored.billing_policy,'legacy_receipt')
+        self.assertEqual(restored.payments.get().source,'receipt')
+        self.assertEqual(restored.payments.get().amount,25)
 
     def test_replace_restores_historical_fields_and_offers_safety_backup(self):
         # These stored historical values must survive without recalculating using today's settings.

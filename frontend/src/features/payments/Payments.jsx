@@ -75,7 +75,7 @@ export function Payments({ payments, refresh, refreshing }) {
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{p.bill_period}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#22c55e", fontWeight: 700 }}>{formatCurrency(p.amount)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: p.penalty_paid > 0 ? "#ef4444" : "#8b949e" }}>{p.penalty_paid > 0 ? formatCurrency(p.penalty_paid) : "—"}</td>
-                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{p.receipt_no || "—"}</td>
+                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{p.receipt_no || "—"}<small>{p.source==='security_application'?'Security application — no new cash receipt':'Receipt'}</small></td>
               </tr>
             ))}
           </tbody>

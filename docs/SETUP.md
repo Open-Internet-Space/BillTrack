@@ -30,6 +30,9 @@ The new-copy instructions create a new database. They are not instructions for u
 
 ## 3. Understand how an update travels
 
+BillTrack databases on migration `0005_protected_submissions` can upgrade through estate migrations `0006` to `0017` after a verified backup. The office installation has a separate migration lineage and uses its separately tested release.
+
+
 1. Make the change in `E:\BillTrack-Clean`.
 2. Test it using made-up records and separate test files.
 3. Publish the reviewed source from that repository to GitHub. Keep private files out.

@@ -60,7 +60,7 @@ export default class API {
   }
 
   static request(endpoint, options = {}) {
-    const changesData = Boolean(options.method && options.method !== "GET" && endpoint !== "/auth/login/" && endpoint !== "/reports/");
+    const changesData = Boolean(options.method && options.method !== "GET" && endpoint !== "/auth/login/" && endpoint !== "/reports/" && !/^\/(?:estate-charges|estate-security)\/\d+\/decision-preview\/$/.test(endpoint) && !/^\/bills\/(?:\d+\/)?preview\/$/.test(endpoint));
     return this.perform(endpoint, { ...options, headers: { ...this.headers(), ...options.headers } },
       response => response.status === 204 ? null : response.json(), changesData);
   }

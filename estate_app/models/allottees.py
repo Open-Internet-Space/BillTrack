@@ -92,14 +92,14 @@ class Tenant(models.Model):
         self.email = (self.email or '').strip()
         return super().save(*args, **kwargs)
 
-    def get_gst_rate(self):
+    def get_gst_rate(self, system_settings=None):
         """Get effective GST rate for this tenant"""
         if not self.gst_applicable:
             return Decimal('0')
         if self.custom_gst_rate is not None:
-            return self.custom_gst_rate
-        settings = SystemSettings.get_settings()
-        return settings.gst_rate if settings.gst_applicable else Decimal('0')
+            return Decimal(str(self.custom_gst_rate))
+        settings = system_settings if system_settings is not None else SystemSettings.get_settings()
+        return Decimal(str(settings.gst_rate)) if settings.gst_applicable else Decimal('0')
 
     def get_penalty_config(self, system_settings=None):
         """Get effective penalty configuration for this tenant"""

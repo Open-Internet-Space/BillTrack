@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import EmailMessage, get_connection
 from django.core.validators import validate_email
-from django.db.models import F
+from django.db.models import F, Q
 from django.db import transaction
 from django.utils import timezone
 from ..models import Bill
@@ -55,16 +55,25 @@ def preview(today=None,ignore_log_pk=None):
     history=ReminderSubmission.objects.filter(send_date__gte=today-dt.timedelta(days=100),status__in=BLOCKING)
     if ignore_log_pk:
         history=history.exclude(pk=ignore_log_pk)
-    blocked=set();blocked_today=set()
+    blocked=set();linked_legacy_blocked=set();blocked_today=set()
     for log in history:
-        blocked.update(item.get('key') for item in log.items if isinstance(item,dict))
+        for item in log.items:
+            if not isinstance(item, dict):
+                continue
+            history_key = item.get('key')
+            if isinstance(history_key, str) and history_key.count('|') == 5 and item.get('bill_id'):
+                linked_legacy_blocked.add((history_key, item['bill_id']))
+            else:
+                blocked.add(history_key)
         if log.send_date==today:
             blocked_today.add(str(log.allottee_uuid))
     skipped=Counter()
-    skipped['Receipt not confirmed']=Bill.objects.filter(issue_date__isnull=True).count()
-    skipped['Outside reminder window']=Bill.objects.filter(issue_date__lt=today-dt.timedelta(days=100)).count()
+    oldest=today-dt.timedelta(days=100)
+    skipped['Receipt not confirmed']=Bill.objects.filter(billing_policy='legacy_receipt',issue_date__isnull=True).count()
+    skipped['Email dispatch pending']=Bill.objects.filter(billing_policy='notices_368_369',email_dispatched_at__isnull=True).count()
+    skipped['Outside reminder window']=Bill.objects.filter(Q(issue_date__lt=oldest)|Q(email_dispatched_at__date__lt=oldest)).count()
     groups={}
-    for bill in bill_read_queryset().filter(issue_date__isnull=False,issue_date__gte=today-dt.timedelta(days=100)):
+    for bill in bill_read_queryset().filter(Q(issue_date__gte=oldest)|Q(email_dispatched_at__date__gte=oldest)):
         tenant=bill.tenant
         if not tenant.active:
             skipped['Inactive allottee']+=1;continue
@@ -75,21 +84,29 @@ def preview(today=None,ignore_log_pk=None):
             validate_email(email)
         except ValidationError:
             skipped['Missing or invalid email']+=1;continue
-        if today>cutoff_date(bill.issue_date):
+        confirmed=bill.confirmation_date
+        if confirmed>today:
+            continue
+        if today>cutoff_date(confirmed):
             skipped['Outside reminder window']+=1;continue
-        stage=milestone(bill.issue_date,bill.due_date,today)
+        stage=milestone(confirmed,bill.due_date,today)
         if stage is None:
             skipped['No reminder due yet']+=1;continue
         principal=bill.balance_due;penalty=bill.penalty
         if principal+penalty<=0:
             skipped['Settled bill']+=1;continue
         offset,scheduled=stage
-        key='|'.join([str(tenant.uuid),str(bill.year),str(bill.month),str(bill.issue_date),str(bill.due_date),str(offset)])
-        if key in blocked or str(tenant.uuid) in blocked_today:
+        key='|'.join([str(tenant.uuid),str(bill.year),str(bill.month),str(confirmed),str(bill.due_date),str(offset)])
+        legacy_key = key
+        if bill.allotment_id:
+            key += '|' + str(bill.allotment.uuid)
+        if key in blocked or (legacy_key, bill.pk) in linked_legacy_blocked or str(tenant.uuid) in blocked_today:
             skipped['Already sent or awaiting review']+=1;continue
         group=groups.setdefault(str(tenant.uuid),{'uuid':str(tenant.uuid),'allottee':tenant,'email':email,'items':[],'total':Decimal('0')})
         group['items'].append({'key':key,'bill_id':bill.pk,'reference':bill.dispatch_ref_no or bill.invoice_no,
-            'period':f'{bill.get_month_name()} {bill.year}','receipt_date':str(bill.issue_date),'due_date':str(bill.due_date),
+            'period':f'{bill.get_month_name()} {bill.year}','receipt_date':str(confirmed),'due_date':str(bill.due_date),
+            'shop':bill.allotment.shop.code if bill.allotment_id else '', 'award':bill.allotment.award_reference if bill.allotment_id else '',
+            'policy':bill.billing_policy,
             'offset':offset,'scheduled_date':str(scheduled),'principal':f'{principal:.2f}','penalty':f'{penalty:.2f}',
             'total':f'{principal+penalty:.2f}'})
         group['total']+=principal+penalty
@@ -134,13 +151,12 @@ def send_reminders(today=None,selected=None,automatic=False,confirmed=None,user_
     groups=[group for group in groups if group['uuid'] in approved]
     for group in groups:
         with transaction.atomic():
+            claimed=ReminderSubmission.objects.filter(allottee_uuid=group['uuid'],send_date=today,
+                status__in=['failed','skipped']).update(status='preparing',attempts=F('attempts')+1,error='')
             log,created=ReminderSubmission.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
                 'allottee_name':group['allottee'].name,'recipient':approved[group['uuid']]['to'],'items':group['items']})
-            if not created:
-                claimed=ReminderSubmission.objects.filter(pk=log.pk,status__in=['failed','skipped']).update(status='preparing',attempts=F('attempts')+1,error='')
-                if not claimed:
-                    result['skipped']+=1;continue
-                log.refresh_from_db()
+            if not created and not claimed:
+                result['skipped']+=1;continue
             delivery,_=ReminderDelivery.objects.get_or_create(allottee_uuid=group['uuid'],send_date=today,defaults={
                 'allottee':group['allottee'],'allottee_name':log.allottee_name,'recipient':log.recipient,'items':log.items})
             log.delivery_id=delivery.pk

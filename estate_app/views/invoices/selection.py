@@ -6,7 +6,7 @@ from .context import invoice_context
 def selected_bills_from_ids(selected_ids):
     bills = list(
         Bill.objects.filter(pk__in=selected_ids)
-        .select_related('tenant', 'created_by')
+        .select_related('tenant', 'created_by', 'allotment__shop')
         .prefetch_related('payments')
     )
     bills_by_id = {bill.pk: bill for bill in bills}
@@ -17,7 +17,7 @@ def selected_invoice_contexts(bills):
     system_settings = SystemSettings.get_settings()
     by_tenant = {}
     for bill in bills:
-        group = by_tenant.setdefault(bill.tenant_id, {})
+        group = by_tenant.setdefault((bill.tenant_id, bill.allotment_id, bill.is_draft), {})
         group[bill.pk] = bill
     invoices = []
     for group in by_tenant.values():

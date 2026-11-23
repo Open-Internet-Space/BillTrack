@@ -7,10 +7,10 @@ import { matchesSearch } from "../../Filters";
 import RefreshButton from "../../RefreshButton";
 import API from "../../api";
 
-export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, onOpenDraft, initialContext }) {
+export function Bills({ user, bills, tenants, setBills, setModal, refresh, showToast, onOpenDraft, initialContext }) {
   const billRows = useMemo(() => Array.isArray(bills) ? bills : [], [bills]);
   const [refreshing, setRefreshing] = useState(false);
-  const [filters, setFilters] = useState({ tenant: String(initialContext?.tenant || "all"), status: "all", receipt: "all", search: "", type: "all", year: "all", month: "all", billId: initialContext?.billId || null });
+  const [filters, setFilters] = useState({ tenant: String(initialContext?.tenant || "all"), status: "all", receipt: "all", search: "", type: "all", year: "all", month: "all", billId: initialContext?.billId || null, allotment: initialContext?.allotment || null, shopCode: initialContext?.shopCode || '' });
   const [selectedBillIds, setSelectedBillIds] = useState([]);
   const tenantOptions = useMemo(() => {
     const map = new Map(tenants.map(t => [String(t.id), allotteeLabel(t)]));
@@ -35,15 +35,17 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
       if (!matchesSearch(filters.search, b.invoice_no, b.dispatch_ref_no, (b.tenant_display_name || b.tenant_name))) return false;
       if (filters.type !== "all" && b.tenant_type !== filters.type) return false;
       if (filters.billId && b.id !== filters.billId) return false;
+      if (filters.allotment && String(b.allotment) !== String(filters.allotment)) return false;
       if (filters.tenant !== "all" && String(b.tenant) !== filters.tenant) return false;
       if (filters.status !== "all" && b.status !== filters.status) return false;
-      if (filters.receipt !== "all" && Boolean(b.issue_date) !== (filters.receipt === "confirmed")) return false;
+      if (filters.receipt !== "all" && Boolean(b.billing_policy === 'notices_368_369' ? b.email_dispatched_at : b.issue_date) !== (filters.receipt === "confirmed")) return false;
       if (filters.year !== "all" && String(b.year) !== filters.year) return false;
       if (filters.month !== "all" && String(b.month) !== filters.month) return false;
       return true;
     });
   }, [billRows, filters]);
-  const changeFilter = (field, value) => setFilters(previous => ({ ...previous, [field]: value, billId: null }));
+  const changeFilter = (field, value) => setFilters(previous => ({ ...previous, [field]: value, billId: null,
+    ...(field === 'tenant' ? { allotment: null, shopCode: '' } : {}) }));
   const selectedSet = useMemo(() => new Set(selectedBillIds), [selectedBillIds]);
   const pagination = usePagination(filteredBillRows);
   const { pageSize, setPage, pageRows } = pagination;
@@ -157,11 +159,11 @@ export function Bills({ bills, tenants, setBills, setModal, refresh, showToast, 
           >
             Print Selected ({selectedBillIds.length})
           </button>
-          <button className="btn-primary" onClick={() => setModal({ type: "addBill", tenant: filters.tenant !== "all" ? filters.tenant : undefined })}>+ Raise Bill</button>
+          <button className="btn-primary" onClick={() => setModal({ type: "addBill", tenant: filters.tenant !== "all" ? filters.tenant : undefined, allotment: filters.allotment })}>+ Raise Bill</button>
         </div>
       </div>
       <BillFilters filters={filters} billRows={billRows} setFilters={setFilters} changeFilter={changeFilter} types={types} tenantOptions={tenantOptions} yearOptions={yearOptions} monthOptions={monthOptions} pagination={pagination} />
-      <BillTable allSelected={allSelected} toggleAllBills={toggleAllBills} pageRows={pageRows} selectedSet={selectedSet} toggleBillSelection={toggleBillSelection} openInvoice={openInvoice} setModal={setModal} deleteBill={deleteBill} />
+      <BillTable user={user} allSelected={allSelected} toggleAllBills={toggleAllBills} pageRows={pageRows} selectedSet={selectedSet} toggleBillSelection={toggleBillSelection} openInvoice={openInvoice} setModal={setModal} deleteBill={deleteBill} />
     </div>
   );
 }

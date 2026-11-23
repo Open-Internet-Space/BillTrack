@@ -24,11 +24,16 @@ def generate(allottee_id,bill_ids,template):
     config=SystemSettings.objects.first()
     lines=[]; total=Decimal('0')
     for bill in bills:
+        if bill.is_draft:
+            raise ValidationError('Raise the selected notice invoice before preparing a dues email.')
         principal=bill.balance_due; penalty=bill.penalty
         total+=principal+penalty
-        due=str(bill.due_date) if bill.issue_date else 'Receipt not confirmed; due date not established'
+        due=str(bill.due_date) if bill.deadline_established else 'Receipt not confirmed; due date not established'
+        evidence = f'Shop {bill.allotment.shop.code} | Award {bill.allotment.award_reference}\n' if bill.allotment_id else ''
+        if bill.billing_policy == 'notices_368_369':
+            evidence += f'Notices 368–369 | Raised {bill.raised_date} | Email dispatch: {bill.dispatch_day or "awaiting confirmation"}\n'
         lines.append(f'{bill.get_month_name()} {bill.year} | Reference: {bill.dispatch_ref_no or bill.invoice_no}\n'
-                     f'Due date: {due}\nRemaining principal: INR {principal:.2f}\n'
+                     f'{evidence}Due date: {due}\nRemaining principal: INR {principal:.2f}\n'
                      f'Remaining penalty: INR {penalty:.2f}\nOutstanding: INR {principal+penalty:.2f}')
     now=timezone.now()
     values={'allottee_name':allottee.name,'allotment_description':allottee.allotment_description,'organisation_name':config.letterhead_name if config else '',

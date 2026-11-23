@@ -15,7 +15,12 @@ def refresh_bills(bill_ids, using):
 
 class PaymentQuerySet(models.QuerySet):
     def update(self, **kwargs):
-        if not {'bill', 'bill_id', 'amount', 'penalty_paid', 'payment_date'} & kwargs.keys():
+        if {'source', 'operation_id'} & kwargs.keys():
+            raise ValidationError('Receipt sources and paired security operation IDs cannot be rewritten.')
+        financial = {'bill', 'bill_id', 'amount', 'penalty_paid', 'payment_date', 'source', 'operation_id', 'recorded_by', 'recorded_by_id'}
+        if financial & kwargs.keys() and self.filter(source='security_application').exists():
+            raise ValidationError('Paired security settlements cannot be rewritten through bulk corrections.')
+        if not financial & kwargs.keys():
             return super().update(**kwargs)
         with transaction.atomic(using=self.db):
             original = list(self.values_list('pk', 'bill_id'))
@@ -40,6 +45,8 @@ class PaymentQuerySet(models.QuerySet):
 
     def delete(self):
         with transaction.atomic(using=self.db):
+            if self.filter(source='security_application').exists():
+                raise ValidationError('Paired security settlements cannot be deleted as ordinary receipts.')
             bill_ids = set(self.values_list('bill_id', flat=True))
             result = super().delete()
             refresh_bills(bill_ids, self.db)
@@ -56,6 +63,9 @@ class Payment(models.Model):
                                        help_text="Penalty component (if any)")
     receipt_no   = models.CharField(max_length=50, blank=True, help_text="Cash receipt / Cheque number")
     notes        = models.TextField(blank=True)
+    source       = models.CharField(max_length=25, default='receipt', choices=[
+        ('receipt', 'Receipt'), ('security_application', 'Reviewed security application')])
+    operation_id = models.UUIDField(null=True, blank=True, unique=True, editable=False)
     recorded_by  = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments_recorded')
     created_at   = models.DateTimeField(auto_now_add=True)
 
@@ -63,24 +73,40 @@ class Payment(models.Model):
         ordering = ['-payment_date', '-created_at']
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
+        constraints = [models.CheckConstraint(check=(models.Q(source='receipt',operation_id__isnull=True)
+            | models.Q(source='security_application',operation_id__isnull=False)), name='estate_payment_source')]
 
     def __str__(self):
         return f"₹{self.amount} | {self.bill.invoice_no} | {self.payment_date}"
 
     def clean(self):
+        from ..estate.security import validate_security_pair
+        previous = type(self).objects.filter(pk=self.pk).first() if self.pk and not self._state.adding else None
+        validate_security_pair(self, previous, 'bill')
         if self.amount < 0 or (self.amount == 0 and self.penalty_paid == 0):
             raise ValidationError({'amount': 'Enter a principal or penalty payment'})
         if self.penalty_paid < 0:
             raise ValidationError({'penalty_paid': 'Penalty cannot be negative'})
+        if self.bill_id and self.bill.billing_policy == 'notices_368_369':
+            if not self.bill.raised_date:
+                raise ValidationError({'bill': 'Raise the notice invoice before recording a receipt.'})
+            if self.payment_date < self.bill.raised_date or self.payment_date > timezone.localdate():
+                raise ValidationError({'payment_date': 'A notice receipt must be dated between invoice raising and today.'})
 
     @transaction.atomic
     def save(self, *args, **kwargs):
         old_bill_id = Payment.objects.filter(pk=self.pk).values_list('bill_id', flat=True).first() if self.pk else None
+        self.full_clean()
         super().save(*args, **kwargs)
         # Automatically recalculate bill status (backend logic)
         refresh_bills({self.bill_id, old_bill_id}, self._state.db)
         if 'bill' in self._state.fields_cache:
             self.bill.refresh_from_db()
+
+    def delete(self, *args, **kwargs):
+        if type(self).objects.filter(pk=self.pk, source='security_application').exists():
+            raise ValidationError('Paired security settlements cannot be deleted as ordinary receipts.')
+        return super().delete(*args, **kwargs)
 
 
 @receiver(post_delete, sender=Payment)

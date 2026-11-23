@@ -456,13 +456,66 @@
             "Bills"
           ],
           "role": "Bills composes its filter/table blocks and owns selections, refresh, delete and authorized printing. Model methods own GST, penalty, previous dues and receipt deadlines."
+        },
+        {
+          "path": "estate_app/estate/billing.py",
+          "symbols": [
+            "holiday_rent",
+            "annual_revisions",
+            "rent_schedule",
+            "notice_interest"
+          ],
+          "role": "Inclusive actual-calendar-day Decimal rent waivers shared by validation, saves and imports."
+        },
+        {
+          "path": "estate_app/migrations/0008_holiday_rent_evidence.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Additive original-rent/holiday evidence with historical audit guards retained."
+        },
+        {
+          "path": "estate_app/migrations/0009_link_bill_allotment.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Protected term identity, explicit legacy category and conditional monthly uniqueness."
+        },
+        {
+          "path": "frontend/src/features/bills/billing.css",
+          "symbols": [],
+          "role": "Responsive monthly rent previews and one-column phone bill forms."
+        },
+        {
+          "path": "estate_app/migrations/0011_notice_bill_dates.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation."
+        },
+        {
+          "path": "estate_app/migrations/0012_bill_rate_snapshots.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation."
+        },
+        {
+          "path": "estate_app/migrations/0013_notice_bill_guards.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Additive notice policy/evidence/snapshot guards; old bills remain legacy without financial recalculation."
         }
       ],
       "tests": [
         "frontend/src/features/bills/bills.test.jsx",
         "estate_app/tests/test_bill_balances.py",
         "estate_app/tests/test_receipts.py",
-        "estate_app/tests/test_bill_performance.py"
+        "estate_app/tests/test_bill_performance.py",
+        "estate_app/tests/test_holiday_rent.py",
+        "estate_app/tests/test_estate_billing.py",
+        "estate_app/tests/test_notice_billing.py"
       ],
       "settings": "Billing parameters and system GST/penalty settings are data, not template constants.",
       "caution": "Keep calculations in Python. Receipt confirmation starts the existing five-day deadline; preserve money precision and historical invoice numbers."
@@ -687,7 +740,8 @@
       ],
       "tests": [
         "frontend/src/features/reports/Reports.test.jsx",
-        "estate_app/tests/test_reports.py"
+        "estate_app/tests/test_reports.py",
+        "estate_app/tests/test_estate_reporting.py"
       ],
       "settings": "No administrator setting; edit the indicated source.",
       "caution": "Historical reports reconstruct current records; preserve snapshot validation, cutoff semantics, matching export rows and money precision."
@@ -1233,10 +1287,39 @@
           "path": "estate_app/templates/admin/data_transfer.html",
           "symbols": [],
           "role": "Serialization validates portable JSON, restoration applies merge/replace, and views/forms enforce access and expose safety downloads."
+        },
+        {
+          "path": "estate_app/data_transfer/graph.py",
+          "symbols": [
+            "validate_graph",
+            "require"
+          ],
+          "role": "Validate both incoming records and the combined retained and imported estate graph."
+        },
+        {
+          "path": "estate_app/estate/legacy.py",
+          "symbols": [
+            "LegacyReviewForm",
+            "legacy_preview",
+            "legacy_confirm"
+          ],
+          "role": "Reviewed historical bill assignment and separate billing policy conversion."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/bill/legacy_review.html",
+          "symbols": [],
+          "role": "Compare historical dates, amounts and retained receipts before confirmation."
+        },
+        {
+          "path": "estate_app/templates/admin/estate_app/bill/change_form.html",
+          "symbols": [],
+          "role": "Open the superuser historical bill review."
         }
       ],
       "tests": [
-        "estate_app/tests/test_data_transfer.py"
+        "estate_app/tests/test_data_transfer.py",
+        "estate_app/tests/test_estate_transfer.py",
+        "estate_app/tests/test_legacy_review.py"
       ],
       "settings": "No administrator setting; edit the indicated source.",
       "caution": "Preserve version/size validation, superuser authorization, confirmation, transaction rollback, UUID merge identity and private safety backups."
@@ -1503,7 +1586,8 @@
         "frontend/src/features/payments/payments.test.jsx",
         "frontend/src/features/penalties/penalties.test.jsx",
         "frontend/src/features/reports/Reports.test.jsx",
-        "frontend/src/features/workspace/workspace.test.jsx"
+        "frontend/src/features/workspace/workspace.test.jsx",
+        "estate_app/tests/test_estate_reporting.py"
       ],
       "settings": "No administrator setting; edit the indicated source.",
       "caution": "Run against isolated test databases; do not load sample data or reset a real password in the daily-work installation."
@@ -1531,6 +1615,16 @@
             "generate"
           ],
           "role": "Registry validation and deterministic Markdown/HTML generation."
+        },
+        {
+          "path": "docs/COMPONENT-MAP.md",
+          "symbols": [],
+          "role": "Generated linked modification guide for GitHub/editor reading."
+        },
+        {
+          "path": "docs/component-map.html",
+          "symbols": [],
+          "role": "Generated searchable, collapsible local HTML modification guide."
         }
       ],
       "tests": [
@@ -1994,6 +2088,276 @@
       ],
       "settings": "Use existing Admin correction forms; SQLite schema migrations are required.",
       "caution": "Preserve secret allowlists, immutable evidence, payment recalculation and independent reminder protection. Do not downgrade source alone."
+    },
+    {
+      "id": "estate",
+      "title": "Shops, allotment terms and physical occupancy",
+      "purpose": "Shop identity, allotment and renewal history, compliance, billing, charges, deposits and expiry attention.",
+      "parent": null,
+      "files": [
+        {
+          "path": "estate_app/models/estate.py",
+          "symbols": [
+            "Shop",
+            "Allotment",
+            "AllotmentRequirement",
+            "calendar_months",
+            "yearly_end"
+          ],
+          "role": "Validated estate domain records; SQLite serialization precedes overlap validation."
+        },
+        {
+          "path": "estate_app/migrations/0006_estate_records.py",
+          "symbols": [
+            "Migration",
+            "rebuild_audit"
+          ],
+          "role": "Additive estate schema and audit-trigger refresh; does not infer or create live shop awards."
+        },
+        {
+          "path": "estate_app/migrations/0007_original_award_reference.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Prevent duplicate original award references for a shop."
+        },
+        {
+          "path": "estate_app/estate/__init__.py",
+          "symbols": [],
+          "role": "Estate feature package."
+        },
+        {
+          "path": "estate_app/estate/api.py",
+          "symbols": [
+            "ShopSerializer",
+            "AllotmentSerializer",
+            "RequirementSerializer",
+            "EstateViewSet",
+            "ShopViewSet",
+            "AllotmentViewSet",
+            "RequirementViewSet",
+            "EstateAttentionView",
+            "allotment_queryset",
+            "RentRevisionSerializer",
+            "RentRevisionViewSet"
+          ],
+          "role": "Authenticated audited CRUD and paginated administrative attention; model validation is shared with Admin."
+        },
+        {
+          "path": "estate_app/admin/estate.py",
+          "symbols": [
+            "ShopAdmin",
+            "AllotmentAdmin",
+            "RequirementAdmin",
+            "RentRevisionAdmin"
+          ],
+          "role": "Estate Admin searches, protected history and server-owned document verifier identity."
+        },
+        {
+          "path": "frontend/src/features/estate/EstatePage.jsx",
+          "symbols": [
+            "EstatePage"
+          ],
+          "role": "Searchable shop/term tables, history/details, contractual versus physical status and evidence navigation."
+        },
+        {
+          "path": "frontend/src/features/estate/EstateForms.jsx",
+          "symbols": [
+            "ShopForm",
+            "AllotmentForm",
+            "RequirementForm",
+            "RentRevisionForm"
+          ],
+          "role": "Accessible record, renewal and evidence forms integrated with the shared save/error modal."
+        },
+        {
+          "path": "frontend/src/features/estate/EstateAttention.jsx",
+          "symbols": [
+            "EstateAttention",
+            "attentionLabel"
+          ],
+          "role": "Dashboard estate actions with business as-of date, pagination and direct record navigation."
+        },
+        {
+          "path": "frontend/src/features/estate/estate.css",
+          "symbols": [],
+          "role": "Estate table/form/detail styling and dashboard space for attention without clipping collection lists."
+        },
+        {
+          "path": "estate_app/models/rates.py",
+          "symbols": [
+            "RentRevision"
+          ],
+          "role": "Reviewed original-award rent schedules, annual progression and protection of billed rates."
+        },
+        {
+          "path": "estate_app/migrations/0010_reviewed_rent_schedule.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Add rate schedule with unique effective dates and retained audit guards."
+        },
+        {
+          "path": "estate_app/models/charges.py",
+          "symbols": [
+            "EstateCharge",
+            "EstateChargePayment"
+          ],
+          "role": "Validated assessed obligations and dated receipts; serialized balances and protected renewal fee history."
+        },
+        {
+          "path": "estate_app/estate/charges.py",
+          "symbols": [
+            "EstateChargeSerializer",
+            "ChargePaymentSerializer",
+            "EstateChargeViewSet",
+            "ChargePaymentViewSet",
+            "charge_queryset",
+            "charge_fingerprint",
+            "prepare_charge_decision",
+            "ChargeDecisionInput",
+            "ChargeConfirmationInput"
+          ],
+          "role": "Audited charge APIs and signed, actor-bound, stale-safe financial decision review."
+        },
+        {
+          "path": "estate_app/admin/charges.py",
+          "symbols": [
+            "EstateChargeAdmin",
+            "EstateChargePaymentAdmin"
+          ],
+          "role": "Charge assessment and receipt administration; financial decisions remain read-only."
+        },
+        {
+          "path": "estate_app/migrations/0014_assessed_estate_charges.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Add charges/receipts with audit guards; no inferred live obligations."
+        },
+        {
+          "path": "frontend/src/features/estate/EstateCharges.jsx",
+          "symbols": [
+            "EstateCharges",
+            "ChargeForm",
+            "ChargePaymentForm",
+            "ChargeDecisionForm"
+          ],
+          "role": "Term-scoped assessments, receipts and signed superuser decision review."
+        },
+        {
+          "path": "estate_app/estate/security.py",
+          "symbols": [
+            "required_security",
+            "validate_security_requirement",
+            "validate_security_pair"
+          ],
+          "role": "Security requirement calculation and shared validation for paired deposit settlements."
+        },
+        {
+          "path": "estate_app/models/security.py",
+          "symbols": [
+            "SecurityMovement",
+            "SecurityMovementQuerySet"
+          ],
+          "role": "Append-only original-award security liability movements with current/historical held-balance validation."
+        },
+        {
+          "path": "estate_app/migrations/0015_security_liability.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Add empty reviewed requirement fields and security movement records with audit guards."
+        },
+        {
+          "path": "estate_app/migrations/0016_security_payment_sources.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Label old payments as receipts and add unique paired settlement IDs with retained audit guards."
+        },
+        {
+          "path": "estate_app/estate/security_api.py",
+          "symbols": [
+            "SecurityMovementSerializer",
+            "SecurityMovementViewSet",
+            "SecurityAccountSerializer",
+            "SecurityAccountViewSet",
+            "SecurityDecisionInput",
+            "SecurityConfirmationInput",
+            "security_summary",
+            "refund_issues",
+            "security_fingerprint",
+            "prepare_security_decision"
+          ],
+          "role": "Audited receipt API and signed current-evidence requirement, refund, application and forfeiture actions; no external payment."
+        },
+        {
+          "path": "estate_app/admin/security.py",
+          "symbols": [
+            "SecurityMovementAdmin"
+          ],
+          "role": "Actual security receipts and read-only movement history in Admin."
+        },
+        {
+          "path": "estate_app/migrations/0017_security_decision_operation.py",
+          "symbols": [
+            "Migration"
+          ],
+          "role": "Store the unique latest reviewed requirement operation for safe confirmation retries."
+        },
+        {
+          "path": "frontend/src/features/estate/EstateSecurity.jsx",
+          "symbols": [
+            "EstateSecurity",
+            "SecurityReceiptForm",
+            "SecurityDecisionForm"
+          ],
+          "role": "Original-award deposit liability, actual receipts and signed financial review forms with fresh eligible debts."
+        }
+      ],
+      "tests": [
+        "estate_app/tests/test_estate.py",
+        "estate_app/tests/test_estate_api.py",
+        "frontend/src/features/estate/estate.test.jsx",
+        "estate_app/tests/test_notice_billing.py",
+        "estate_app/tests/test_estate_charges.py",
+        "frontend/src/features/estate/charges.test.jsx",
+        "estate_app/tests/test_estate_security.py",
+        "frontend/src/features/estate/security.test.jsx"
+      ],
+      "settings": "Server business date uses Asia/Kolkata. See docs/ESTATE-WORKFLOW.md for staff procedures.",
+      "caution": "Contract expiry is separate from physical vacancy. Preserve protected financial ownership, renewal lineage and explicit approval. Deposit settlement and complete estate restore remain in the sequential implementation ledger."
+    },
+    {
+      "id": "knowledge",
+      "title": "Knowledge Base",
+      "purpose": "Search and read existing staff guides inside BillTrack.",
+      "parent": null,
+      "files": [
+        {
+          "path": "frontend/scripts/build-knowledge-base.cjs",
+          "symbols": [],
+          "role": "Allowlisted documentation catalog and Markdown rendering at frontend build time."
+        },
+        {
+          "path": "frontend/src/features/knowledge/KnowledgeBase.jsx",
+          "symbols": [
+            "KnowledgeBase"
+          ],
+          "role": "Searchable guide index, article reader and links between guides."
+        },
+        {
+          "path": "frontend/src/features/knowledge/knowledge.css",
+          "symbols": [],
+          "role": "Responsive index and article styles."
+        }
+      ],
+      "tests": [
+        "frontend/src/features/knowledge/knowledge.test.jsx"
+      ],
+      "settings": "Edit the documents in docs/ and rebuild the frontend.",
+      "caution": "Only include guides intended for staff. Guides are bundled with the frontend."
     }
   ],
   "recipes": [

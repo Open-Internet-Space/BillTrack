@@ -4,6 +4,8 @@ import { ProjectIdentity } from "./Branding.jsx";
 export function Sidebar({user,page,setBillContext,setPage,handleLogout}) {
 const navItems = [
     { id: "dashboard", label: "Dashboard" },
+    { id: "shops", label: "Shops" },
+    { id: "allotments", label: "Allotments" },
     { id: "tenants", label: "Allottees" },
     { id: "bills", label: "Bills" },
     { id: "payments", label: "Payments" },
@@ -11,6 +13,7 @@ const navItems = [
     { id: "penalty", label: "Penalties" },
     { id: "reports", label: "Reports" },
     { id: "drafts", label: "Email Drafts" },
+    { id: "knowledge", label: "Knowledge Base" },
   ];
 return (<aside className="app-sidebar" style={{ width: 220, background: "#161b22", borderRight: "1px solid #21262d", display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <div style={{ padding: "24px 20px 16px" }}>

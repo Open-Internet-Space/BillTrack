@@ -3,6 +3,9 @@ from .common import money, delete_link, ReceiptStatusFilter
 from .accounts import UserProfileInline, UserAdmin, GroupAdmin, TokenAdmin
 from .settings import SystemSettingsAdmin
 from .allottees import TenantAdmin
+from .estate import ShopAdmin, AllotmentAdmin, RequirementAdmin, RentRevisionAdmin
+from .charges import EstateChargeAdmin, EstateChargePaymentAdmin
+from .security import SecurityMovementAdmin
 from .billing import PaymentInline, BillAdminForm, BillAdmin
 from .payments import PaymentAdmin
 

@@ -140,6 +140,7 @@ class ReceiptBillingTests(TestCase):
     def test_bulk_creation_without_tentative_date_stays_pending(self):
         response = self.client.post('/api/bills/bulk-create/', {
             'tenant': self.tenant.pk, 'from_month': 1, 'from_year': 2026,
+            'billing_category': 'other', 'notes': 'Reviewed non-shop charge',
             'to_month': 2, 'to_year': 2026, 'rent': '100',
         }, format='json')
         self.assertEqual(response.status_code, 201, response.data)

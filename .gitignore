@@ -68,3 +68,4 @@ billtrack-before-import-*.json
 *.7z
 *.tar
 *.tar.gz
+/frontend/src/features/knowledge/guide-content.generated.json

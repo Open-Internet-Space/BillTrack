@@ -1,0 +1,16 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>{{ bill.tenant }} · {{ bill.get_month_name }} {{ bill.year }} · {{ bill.invoice_no }}</p>
+{% if review %}
+<table><caption>Current record</caption><tbody>{% for name,value in review.before.items %}<tr><th scope="row">{{ name }}</th><td>{{ value|default_if_none:"—" }}</td></tr>{% endfor %}</tbody></table>
+<table><caption>Proposed record</caption><tbody>{% for name,value in review.after.items %}<tr><th scope="row">{{ name }}</th><td>{{ value|default_if_none:"—" }}</td></tr>{% endfor %}</tbody></table>
+<table><caption>Retained receipt allocations</caption><thead><tr><th>Receipt</th><th>Date</th><th>Principal</th><th>Interest</th><th>Source</th></tr></thead>
+<tbody>{% for p in review.receipts %}<tr><td>{{ p.receipt_no|default:p.id }}</td><td>{{ p.payment_date }}</td><td>{{ p.amount }}</td><td>{{ p.penalty_paid }}</td><td>{{ p.source }}</td></tr>{% empty %}<tr><td colspan="5">No receipts recorded</td></tr>{% endfor %}</tbody></table>
+<p>Reason for correction — {{ review.reason }}</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="confirmation" value="{{ review.confirmation }}"><button type="submit">Confirm reviewed change</button></form>
+{% else %}
+<h2>{% if form.action == 'link' %}Assign this bill to its documented shop allotment{% else %}Convert this bill to the notice billing policy{% endif %}</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="{{ form.action }}">{{ form.as_p }}<button type="submit">Preview change</button></form>
+{% endif %}
+<p><a href="{% url 'admin:estate_app_bill_change' bill.pk %}">Return to invoice</a></p>
+{% endblock %}

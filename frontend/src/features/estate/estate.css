@@ -1,0 +1,43 @@
+.estate-toolbar, .estate-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.estate-actions { justify-content: flex-start; gap: 8px; }
+.estate-table { padding: 0; }
+.estate-table th, .estate-table td { padding: 12px 16px; border-bottom: 1px solid #30363d; text-align: left; }
+.estate-table th { font-size: 12px; color: #a5adb8; }
+.estate-table small, .estate-attention small { display: block; color: #a5adb8; margin-top: 4px; font-size: 12px; }
+.estate-state { display: inline-block; color: #c7cdd5; font-size: 12px; font-weight: 600; }
+.estate-state[data-state="occupied"], .estate-state[data-state="current"] { color: #6ee7a0; }
+.estate-state[data-state="expired"], .estate-state[data-state="terminated"] { color: #fca5a5; }
+.estate-state[data-state="unknown"], .estate-state[data-state="future"] { color: #f5c75d; }
+.estate-detail { margin-top: 28px; padding-top: 24px; border-top: 1px solid #394451; }
+.estate-detail h2 { font-size: 21px; margin-bottom: 14px; }
+.estate-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin: 20px 0 28px; }
+.estate-facts dt { font-size: 12px; color: #a5adb8; margin-bottom: 5px; }
+.estate-facts dd { margin: 0; overflow-wrap: anywhere; }
+.estate-history { list-style: none; padding: 0; margin: 16px 0; }
+.estate-history li { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 10px 0; border-bottom: 1px solid #30363d; }
+.estate-history li > span { min-width: 0; overflow-wrap: anywhere; }
+.estate-form { width: 720px; max-width: 100%; }
+.estate-form h2 { font-size: 24px; margin-bottom: 20px; }
+.estate-form h3 { margin: 24px 0 12px; }
+.estate-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.estate-form label { display: block; font-size: 13px; color: #c7cdd5; }
+.estate-form label > .inp { display: block; width: 100%; margin-top: 6px; }
+.estate-form .estate-checkbox { display: flex; align-items: center; gap: 8px; }
+.estate-wide { grid-column: 1 / -1; }
+.estate-form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+.estate-form-section { margin: 22px 0; }
+.estate-form-section summary { cursor: pointer; margin-bottom: 16px; font-weight: 600; }
+.estate-attention { padding: 0; margin-bottom: 20px; flex-shrink: 0; }
+.estate-attention-list { max-height: 160px; overflow: auto; }
+.estate-attention-entry { display: flex; justify-content: space-between; align-items: start; gap: 14px; padding: 10px 20px; border-bottom: 1px solid #30363d; }
+.estate-attention-entry > span:last-child { text-align: right; flex-shrink: 0; }
+.estate-pagination { padding: 0 20px; }
+.estate-inset { padding: 16px 20px; }
+.dashboard-with-estate { height: auto; min-height: calc(100dvh - 56px); }
+.dashboard-with-estate .dashboard-sections { min-height: 340px; grid-template-rows: auto minmax(220px, 1fr); }
+.dashboard-with-estate .dashboard-list-card { min-height: 220px; max-height: 420px; }
+@media (max-width: 700px) {
+  .estate-form-grid, .estate-facts { grid-template-columns: minmax(0, 1fr); }
+  .estate-attention-entry { flex-direction: column; gap: 6px; }
+  .estate-attention-entry > span:last-child { text-align: left; }
+}

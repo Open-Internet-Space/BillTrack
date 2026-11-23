@@ -30,6 +30,13 @@ test('offline writes are uncertain and are never automatically repeated', async 
   expect(global.fetch).toHaveBeenCalledTimes(1);
 });
 
+test('charge decision previews are read-only while confirmation remains a financial write', async()=>{
+  global.fetch.mockRejectedValue(new TypeError('Failed to fetch'));
+  await expect(API.post('/estate-charges/3/decision-preview/',{})).rejects.toMatchObject({uncertain:false});
+  await expect(API.post('/estate-security/3/decision-preview/',{})).rejects.toMatchObject({uncertain:false});
+  await expect(API.post('/estate-charges/3/apply-decision/',{})).rejects.toMatchObject({uncertain:true});
+});
+
 test('requests time out after sixty seconds and stop waiting', async () => {
   jest.useFakeTimers();
   global.fetch.mockImplementation((url, options) => new Promise((resolve, reject) => {

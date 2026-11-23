@@ -17,7 +17,14 @@ import { BillDispatchForm } from "./features/bills/BillDispatchForm.jsx";
 import { PaymentForm } from "./features/payments/PaymentForm.jsx";
 import { ModalOverlay } from "./shared/ModalOverlay.jsx";
 import { Sidebar } from "./shared/Sidebar.jsx";
+import { KnowledgeBase } from "./features/knowledge/KnowledgeBase.jsx";
 import { ToastNotification } from "./shared/ToastNotification.jsx";
+import { EstatePage } from "./features/estate/EstatePage.jsx";
+import { EstateAttention } from "./features/estate/EstateAttention.jsx";
+import { ChargeForm, ChargePaymentForm, ChargeDecisionForm } from './features/estate/EstateCharges';
+import { SecurityReceiptForm, SecurityDecisionForm } from './features/estate/EstateSecurity';
+import { ShopForm, AllotmentForm, RequirementForm, RentRevisionForm } from "./features/estate/EstateForms.jsx";
+import "./features/estate/estate.css";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -36,6 +43,7 @@ export default function App() {
   const [revision, setRevision] = useState(0);
   const [loadState, setLoadState] = useState({ loading: true, error: "" });
   const [billContext, setBillContext] = useState(null);
+  const [estateContext, setEstateContext] = useState(null);
 
   const [draftContext,setDraftContext]=useState(null);
   const [draftDirty,setDraftDirty]=useState(false);
@@ -45,7 +53,7 @@ export default function App() {
     if(draftBusy){showToast("Wait for the draft operation to finish.",false);return false;}
     return !draftDirty||window.confirm("Discard unsaved draft edits?");
   };
-  const navigate=next=>{if(next===page)return;if(leaveDraft()){setDraftDirty(false);setDraftContext(null);setPage(next);}};
+  const navigate=next=>{if(next===page)return;if(leaveDraft()){setDraftDirty(false);setDraftContext(null);setEstateContext(null);setPage(next);}};
   const openDraft=context=>{setDraftContext(context);setPage("drafts");};
 
   // Data
@@ -92,7 +100,7 @@ export default function App() {
 
   // Ignore responses from a screen that has since been left.
   useEffect(() => {
-    if (!user) return;
+    if (!user || page === "knowledge") return;
     let active = true;
     if (page === "dashboard") loaded.current.payments = 0;
     // shortcut: navigation reuses records for 30s; add live updates if instant cross-session changes are needed.
@@ -162,6 +170,10 @@ export default function App() {
     setBillContext(context);
     setPage("bills");
   };
+  const openEstate = context => {
+    setEstateContext(context);
+    setPage(context.allotment || context.tenant ? 'allotments' : 'shops');
+  };
 
   // Login handler
   const handleLogin = async (username, password) => {
@@ -184,6 +196,7 @@ export default function App() {
     loaded.current = { tenants: 0, bills: 0, payments: 0 };
     setUser(null);
     setPage("dashboard");
+    setEstateContext(null);
     setSessionExpired(false);
     setAuthState({ pending: false, error: "" });
     setAuthRevision(value => value + 1);
@@ -211,14 +224,16 @@ export default function App() {
       <Sidebar user={user} page={page} setBillContext={setBillContext} setPage={navigate} handleLogout={handleLogout} />
 
       {/* Main */}
-      <main ref={mainRef} tabIndex={-1} className="app-main" aria-busy={loadState.loading} style={{ flex: 1, padding: 28 }}>
+      <main ref={mainRef} tabIndex={-1} className="app-main" aria-busy={page !== "knowledge" && loadState.loading} style={{ flex: 1, padding: 28 }}>
         {sessionExpired && <div role="alert" className="error-message"><p>Your sign-in has expired. Sign in again to continue. Unsaved form entries remain available until you leave the form.</p><button type="button" className="btn-ghost" onClick={beginSignIn}>Sign in again</button></div>}
-        {loadState.loading && <div role="status" className="card">Loading current records…</div>}
-        {loadState.error && <div role="alert" className="card load-error"><p>{loadState.error}</p><button className="btn-primary" onClick={refreshData}>Retry</button></div>}
+        {page === "knowledge" && <KnowledgeBase />}
+        {page !== "knowledge" && loadState.loading && <div role="status" className="card">Loading current records…</div>}
+        {page !== "knowledge" && loadState.error && <div role="alert" className="card load-error"><p>{loadState.error}</p><button className="btn-primary" onClick={refreshData}>Retry</button></div>}
         <div hidden={loadState.loading || Boolean(loadState.error)}>
-        {page === "dashboard" && stats && <Dashboard stats={stats} bills={bills} tenants={tenants} onOpenBills={openBills} refresh={refreshData} refreshing={loadState.loading} />}
-        {page === "tenants" && <Allottees onOpenDraft={openDraft} tenants={tenants} onOpenBills={openBills} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
-        {page === "bills" && <Bills onOpenDraft={openDraft} key={`${billContext?.tenant || "all"}-${billContext?.billId || "all"}`} initialContext={billContext} bills={bills} setBills={setBills} tenants={tenants} setModal={setModal} refresh={refreshData} showToast={showToast} />}
+        {page === "dashboard" && stats && <Dashboard stats={stats} bills={bills} tenants={tenants} onOpenBills={openBills} refresh={refreshData} refreshing={loadState.loading} estateAttention={<EstateAttention onOpenBills={openBills} refreshKey={revision} onOpen={openEstate} />} />}
+        {["shops", "allotments"].includes(page) && <EstatePage key={page} mode={page} context={estateContext} revision={revision} setModal={setModal} onOpenBills={openBills} user={user} />}
+        {page === "tenants" && <Allottees onOpenEstate={openEstate} onOpenDraft={openDraft} tenants={tenants} onOpenBills={openBills} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
+        {page === "bills" && <Bills user={user} onOpenDraft={openDraft} key={`${billContext?.tenant || "all"}-${billContext?.billId || "all"}-${billContext?.allotment || 'all'}`} initialContext={billContext} bills={bills} setBills={setBills} tenants={tenants} setModal={setModal} refresh={refreshData} showToast={showToast} />}
         {page === "payments" && <Payments payments={payments} bills={bills} tenants={tenants} setModal={setModal} refresh={refreshData} refreshing={loadState.loading} showToast={showToast} />}
         {page === "adjustments" && <PaymentAdjustments payments={payments} bills={bills} refresh={refreshData} refreshing={loadState.loading} />}
         {page === "penalty" && <PenaltyPage bills={bills} tenants={tenants} refresh={refreshData} refreshing={loadState.loading} />}
@@ -232,6 +247,38 @@ export default function App() {
         // Modal actions mutate backend state and always call refreshData on
         // success to avoid stale UI snapshots.
         <ModalOverlay onClose={closeModal} saving={saving} error={saveError} sessionExpired={sessionExpired} onSignIn={beginSignIn}>
+          {modal.type === 'securityReceipt' && <SecurityReceiptForm account={modal.account} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            await API.post('/security-movements/',data);refreshData();showToast('Deposit receipt recorded');
+          })} />}
+          {modal.type === 'securityDecision' && <SecurityDecisionForm account={modal.account} action={modal.action} chain={modal.chain} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            await API.post(`/estate-security/${modal.account.id}/apply-decision/`,data);refreshData();showToast('Reviewed security decision recorded');
+          })} />}
+          {modal.type === 'estateCharge' && <ChargeForm term={modal.term} kind={modal.kind} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            await API.post('/estate-charges/',data);refreshData();showToast('Charge assessed');
+          })} />}
+          {modal.type === 'estateChargePayment' && <ChargePaymentForm charge={modal.charge} payment={modal.data} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            if(modal.data)await API.patch(`/estate-charge-payments/${modal.data.id}/`,data);else await API.post('/estate-charge-payments/',data);
+            refreshData();showToast('Charge receipt saved');
+          })} />}
+          {modal.type === 'estateChargeDecision' && <ChargeDecisionForm charge={modal.charge} action={modal.action} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            await API.post(`/estate-charges/${modal.charge.id}/apply-decision/`,data);refreshData();showToast('Reviewed charge decision recorded');
+          })} />}
+          {modal.type === 'estateShop' && <ShopForm shop={modal.data} onClose={closeModal} onSave={data => saveModal(async () => {
+            if (modal.data) await API.patch(`/shops/${modal.data.id}/`, data); else await API.post('/shops/', data);
+            refreshData(); showToast('Shop saved');
+          })} />}
+          {modal.type === 'estateTerm' && <AllotmentForm term={modal.data} renewalOf={modal.renewalOf} shop={modal.shop} shops={modal.shops || []} tenants={tenants} onClose={closeModal} onSave={data => saveModal(async () => {
+            if (modal.data) await API.patch(`/allotments/${modal.data.id}/`, data); else await API.post('/allotments/', data);
+            refreshData(); showToast('Allotment saved');
+          })} />}
+          {modal.type === 'estateRequirement' && <RequirementForm requirement={modal.data} onClose={closeModal} onSave={data => saveModal(async () => {
+            await API.patch(`/allotment-requirements/${modal.data.id}/`, data);
+            refreshData(); showToast('Requirement evidence saved');
+          })} />}
+          {modal.type === 'estateRate' && <RentRevisionForm originalAward={modal.originalAward} rate={modal.data} previousRate={modal.previousRate} onClose={closeModal} onSave={data=>saveModal(async()=>{
+            if(modal.data) await API.patch(`/rent-revisions/${modal.data.id}/`,data); else await API.post('/rent-revisions/',data);
+            refreshData(); showToast('Reviewed rent rate saved');
+          })} />}
           {modal.type === "addTenant" && <TenantForm onSave={data => saveModal(async () => {
             await API.post("/tenants/", data);
             refreshData();
@@ -242,7 +289,7 @@ export default function App() {
             refreshData();
             showToast("Allottee updated");
           })} onClose={closeModal} />}
-          {modal.type === "addBill" && <BillForm tenants={tenants} initialTenant={modal.tenant} onSave={data => saveModal(async () => {
+          {modal.type === "addBill" && <BillForm tenants={tenants} initialTenant={modal.tenant} initialAllotment={modal.allotment} onSave={data => saveModal(async () => {
             const result = data.bulk
               ? await API.post("/bills/bulk-create/", data.payload)
               : await API.post("/bills/", data);

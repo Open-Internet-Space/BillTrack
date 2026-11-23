@@ -1,0 +1,7 @@
+{% extends "admin/change_form.html" %}
+{% block object-tools-items %}
+{% if request.user.is_superuser and original.billing_policy == 'legacy_receipt' and original.billing_category != 'other' %}
+<li><a href="{% url 'admin:estate_app_bill_legacy_review' original.pk %}">Review historical bill</a></li>
+{% endif %}
+{{ block.super }}
+{% endblock %}

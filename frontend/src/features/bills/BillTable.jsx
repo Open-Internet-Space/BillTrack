@@ -1,7 +1,7 @@
 import { formatCurrency } from "../../shared/format.js";
 import { StatusBadge } from "../../shared/Badges.jsx";
 
-export function BillTable({ allSelected, toggleAllBills, pageRows, selectedSet, toggleBillSelection, openInvoice, setModal, deleteBill }) {
+export function BillTable({ user, allSelected, toggleAllBills, pageRows, selectedSet, toggleBillSelection, openInvoice, setModal, deleteBill }) {
   return (<div className="card table-scroll" tabIndex={0} role="region" aria-label="Scrollable records" style={{ padding: 0 }}>
         <table>
           <thead>
@@ -49,11 +49,13 @@ export function BillTable({ allSelected, toggleAllBills, pageRows, selectedSet, 
                 <td style={{ padding: "10px 14px", display: "flex", gap: 6, flexWrap: "wrap" }}>
 
                   <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => openInvoice(b.id)}>Invoice</button>
+                  {user?.is_superuser && b.billing_policy==='legacy_receipt' && b.billing_category!=='other' &&
+                    <a className="btn-ghost" href={`/admin/estate_app/bill/${b.id}/legacy-review/`}>Review historical bill</a>}
                   <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "editBill", data: b })}>Edit</button>
-                  <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "updateDispatch", data: b })}>Confirm Receipt / Update Dispatch</button>
+                  <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "updateDispatch", data: b })}>{b.billing_policy === 'notices_368_369' ? 'Record email dispatch' : 'Confirm Receipt / Update Dispatch'}</button>
 
 
-                  {b.status !== "Paid" && (
+                  {b.status !== "Paid" && !b.is_draft && (
                     <button className="btn-primary" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => setModal({ type: "recordPayment", data: b })}>Pay</button>
                   )}
                   <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }} onClick={() => deleteBill(b)}>Delete</button>

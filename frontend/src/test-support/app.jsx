@@ -13,7 +13,8 @@ const sampleTenant = { id: 1, name: "Test Allottee", active: true, type: "Shop" 
 const sampleBill = { id: 1, tenant: 1, tenant_name: "Test Allottee", invoice_no: "TEST-1", year: 2026, month: 11, month_name: "Nov", issue_date: "2026-10-20", receipt_status: "Receipt Confirmed", due_date: "2099-11-30", status: "Unpaid", balance_due: "100.00", penalty: "5.00", days_overdue: 0 };
 
 const fillInput = (input, value) => {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, value);
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(prototype, "value").set.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 };
 

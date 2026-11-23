@@ -9,6 +9,12 @@ from .branding import invoice_branding_context
 from .formatting import round_rupees
 
 
+NOTICE_NOTE = ('Payment is due within seven calendar days after raising the invoice. '
+    'Late interest is 12% per annum simple interest on unpaid billed principal, using actual days / 365, '
+    'only for days after the later of the deadline and confirmed email dispatch. '
+    'GST applies to net rent after any holiday waiver.')
+
+
 def invoice_context(bill, system_settings=None):
     # Normalize all display-ready invoice values in one place to keep HTML/PDF
     # templates "dumb" and predictable.
@@ -18,18 +24,23 @@ def invoice_context(bill, system_settings=None):
     total_penalty = bill.penalty + bill.previous_penalty
     excess_paid = max(Decimal('0'), bill.amount_paid - bill.total_amount)
     total_payable = max(Decimal('0'), bill.total_payable - excess_paid)
-    invoice_date = bill.issue_date or bill.created_at.date()
+    invoice_date = bill.raised_date or bill.issue_date or bill.created_at.date()
     system_settings = system_settings if system_settings is not None else SystemSettings.get_settings()
     branding = invoice_branding_context(system_settings, bill.issue_date.year if bill.issue_date else bill.year)
 
     return {
         **branding,
         'bill': bill,
+        'notice_policy': bill.billing_policy == 'notices_368_369',
+        'policy_note': NOTICE_NOTE if bill.billing_policy == 'notices_368_369' else '',
+        'shop_code': bill.allotment.shop.code if bill.allotment_id else '',
+        'full_month_rent': format_money(bill.full_month_rent) if bill.full_month_rent is not None else None,
+        'holiday_waiver': format_money(bill.holiday_waiver),
         'invoice_no': bill.invoice_no or f"Pending-{bill.id}",
         'dispatch_ref_no': bill.dispatch_ref_no or branding['reference_placeholder'],
         'invoice_date': invoice_date.strftime('%d %B %Y'),
         'billing_period': f"{bill.get_month_name()} {bill.year}",
-        'due_date': bill.due_date.strftime('%d %B %Y'),
+        'due_date': bill.due_date.strftime('%d %B %Y') if bill.due_date else 'Draft — not raised',
         'days_in_month': calendar.monthrange(bill.year, bill.month)[1],
         'gst_rate': f"{format_money(gst_rate).rstrip('0').rstrip('.')}%" if gst_rate else 'Nil',
         'cgst_rate': f"{format_money(half_gst_rate).rstrip('0').rstrip('.')}%" if half_gst_rate else 'Nil',
@@ -62,13 +73,12 @@ def invoice_context(bill, system_settings=None):
 
 
 def consolidated_invoice_context(bills, system_settings=None):
-    # Consolidated view is only valid for a single tenant across selected months.
-    # The print selector groups mixed selections by tenant before calling this.
+    # Carry-forward and invoice groups share the same person-and-term boundary.
     if not bills:
         return None
 
-    tenant_ids = {bill.tenant_id for bill in bills}
-    if len(tenant_ids) != 1:
+    groups = {(bill.tenant_id, bill.allotment_id, bill.is_draft) for bill in bills}
+    if len(groups) != 1:
         return None
 
     ordered = sorted(bills, key=lambda bill: (bill.year, bill.month, bill.pk))
@@ -95,9 +105,12 @@ def consolidated_invoice_context(bills, system_settings=None):
     branding = invoice_branding_context(system_settings, last_bill.issue_date.year if last_bill.issue_date else last_bill.year)
     previous_due_bills = Bill.objects.filter(
         tenant=tenant,
+        allotment_id=last_bill.allotment_id,
         status__in=['Unpaid', 'Partial'],
-        issue_date__isnull=False,
         due_date__lt=today,
+    ).filter(
+        Q(billing_policy='legacy_receipt', issue_date__isnull=False)
+        | Q(billing_policy='notices_368_369', raised_date__isnull=False)
     ).filter(
         Q(year__lt=last_bill.year) |
         Q(year=last_bill.year, month__lt=last_bill.month)
@@ -114,18 +127,29 @@ def consolidated_invoice_context(bills, system_settings=None):
     gst_rate = gst_rates.pop() if len(gst_rates) == 1 else None
     half_gst_rate = gst_rate / 2 if gst_rate is not None else None
     treatments = {bill.gst_treatment for bill in ordered}
+    due_dates = [bill.due_date for bill in ordered if bill.due_date]
+    policies = {bill.billing_policy for bill in ordered}
+    notice_policy = policies == {'notices_368_369'}
+    mixed_policies = len(policies) > 1
     is_igst = treatments == {'igst'}
     gst_treatment_label = 'IGST' if is_igst else ('CGST + SGST' if treatments == {'cgst_sgst'} else 'Mixed')
 
     return {
         **branding,
         'tenant': tenant,
+        'is_draft': all(bill.is_draft for bill in ordered),
+        'notice_policy': notice_policy,
+        'mixed_policies': mixed_policies,
+        'policy_note': ('Mixed billing policies: each monthly line retains its own deadline and interest basis. '
+            'Legacy receipt-policy lines retain the confirmed-receipt deadline. Notice-policy lines: ' + NOTICE_NOTE)
+            if mixed_policies else NOTICE_NOTE if notice_policy else '',
+        'shop_code': last_bill.allotment.shop.code if last_bill.allotment_id else '',
         'bills': ordered,
         'invoice_no': f"Consolidated ({billing_period})",
         'dispatch_ref_no': branding['reference_placeholder'],
         'invoice_date': timezone.localdate().strftime('%d %B %Y'),
         'billing_period': billing_period,
-        'due_date': max(bill.due_date for bill in ordered).strftime('%d %B %Y'),
+        'due_date': max(due_dates).strftime('%d %B %Y') if due_dates else 'Draft — not raised',
         'gst_rate': f"{format_money(gst_rate).rstrip('0').rstrip('.')}%" if gst_rate else ('Mixed' if gst_rate is None else 'Nil'),
         'cgst_rate': f"{format_money(half_gst_rate).rstrip('0').rstrip('.')}%" if half_gst_rate else ('Mixed' if half_gst_rate is None else 'Nil'),
         'sgst_rate': f"{format_money(half_gst_rate).rstrip('0').rstrip('.')}%" if half_gst_rate else ('Mixed' if half_gst_rate is None else 'Nil'),
@@ -157,7 +181,19 @@ def consolidated_invoice_context(bills, system_settings=None):
                 'index': index,
                 'period': f"{bill.get_month_name()} {bill.year}",
                 'invoice_no': bill.invoice_no or f"Pending-{bill.id}",
+                'policy_label': bill.get_billing_policy_display(),
+                'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'Draft — not raised',
                 'rent': format_money(bill.rent),
+                'full_month_rent': format_money(bill.full_month_rent) if bill.full_month_rent is not None else None,
+                'holiday_waiver': format_money(bill.holiday_waiver),
+                'holiday_closed_days': bill.holiday_closed_days,
+                'days_in_month': calendar.monthrange(bill.year, bill.month)[1],
+                'holiday_start_date': bill.holiday_start_date,
+                'holiday_end_date': bill.holiday_end_date,
+                'rate_snapshot': f'{bill.rate_snapshot:.4f}' if bill.rate_snapshot is not None else None,
+                'area_snapshot': f'{bill.area_snapshot:.4f}' if bill.area_snapshot is not None else None,
+                'rent_revision_reference': bill.rent_revision_reference,
+                'notes': bill.notes,
                 'electric_reading': bill.electric_reading,
                 'electric': format_money(bill.electric),
                 'water': format_money(bill.water),

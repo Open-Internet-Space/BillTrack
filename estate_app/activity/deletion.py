@@ -44,7 +44,7 @@ def deletion_plan(objects, *, soft=False):
             bill_ids = {payment.bill_id for payment in collector.data[Payment]}
             add(Bill, Bill.objects.filter(pk__in=bill_ids), 'Recalculate status and balance')
     digest = hashlib.sha256(json.dumps(sorted(rows, key=str), cls=DjangoJSONEncoder).encode()).hexdigest()
-    return {'affected': affected, 'digest': digest,
+    return {'affected': affected, 'digest': digest, 'protected': bool(collector.protected) and not soft,
             'confirmation': signing.dumps(digest, salt='billtrack-deletion')}
 
 
