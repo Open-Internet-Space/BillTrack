@@ -6,13 +6,13 @@ This guide explains where work happens and how changes reach the office applicat
 
 | | Development folder | Live office folder |
 | --- | --- | --- |
-| Location | `E:\BillTrack-Clean` | `E:\EstateManagement` |
+| Location | Any separate folder where you clone or extract the source | The working directory of the existing service or scheduled task |
 | Purpose | Make and test changes to BillTrack | Run the application the office uses daily |
 | Data | Use made-up test records | Real bills, payments, accounts and settings |
 | GitHub | Publish source changes from here | Do not use this as the source for new development |
 | Changes | Develop here first | Install tested, compatible updates here |
 
-The development folder is the **canonical repository**. That simply means it is the main, authoritative copy of the source code. The live folder is a working installation with private information.
+[Open-Internet-Space/BillTrack](https://github.com/Open-Internet-Space/BillTrack) is the canonical source repository. A development checkout can be placed on any drive. In these guides, the application folder is the folder containing `manage.py`.
 
 ## 2. Choose what you want to do
 
@@ -26,14 +26,13 @@ The development folder is the **canonical repository**. That simply means it is 
 | Change the organisation name, logo or invoice details | [Private settings](PRIVATE-CONFIGURATION.md) |
 | Back up data or recover from a problem | [Backup and recovery](BACKUP-RESTORE.md) |
 
-The new-copy instructions create a new database. They are not instructions for updating `E:\EstateManagement`.
+Use the new-copy instructions to create a new database. Use the update instructions above for an existing installation.
 
 ## 3. Understand how an update travels
 
-BillTrack databases on migration `0005_protected_submissions` can upgrade through estate migrations `0006` to `0017` after a verified backup. The office installation has a separate migration lineage and uses its separately tested release.
+Before updating an existing installation, check its applied migrations with `manage.py showmigrations estate_app` using that installation's Python environment. BillTrack databases on `0005_protected_submissions` can upgrade through estate migrations `0006` to `0017` after a verified backup. The historical EstateManagement installation uses a separate lineage and needs its separately tested update.
 
-
-1. Make the change in `E:\BillTrack-Clean`.
+1. Make the change in your development checkout.
 2. Test it using made-up records and separate test files.
 3. Publish the reviewed source from that repository to GitHub. Keep private files out.
 4. Prepare an update that works with the live application's existing database.

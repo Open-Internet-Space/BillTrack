@@ -24,7 +24,7 @@ Do not upload `.env` to GitHub, paste it into chat or replace it with another co
 
 ## Change outgoing email settings
 
-1. Identify the copy that actually sends the mail. For office mail, that is the live installation at `E:\EstateManagement`.
+1. Identify the copy that sends the mail. For an office installation, check the application folder used by its existing startup task.
 2. Have the administrator edit the `.env` beside that installation's `manage.py`.
 3. Use the mail provider's required connection settings and credentials. Where required, use an app password rather than the normal account password.
 4. Set `DEFAULT_FROM_EMAIL` to a complete email address, optionally with a display name, such as `Billing <billing@example.com>`.

@@ -10,7 +10,7 @@ The original repository remains private and its history is not cleaned by this p
 
 ## Initial clean-source preparation evidence
 
-The isolated copy passed208 backend tests,60 frontend tests and12 helper tests, plus a production frontend build and fresh migration check. Synthetic Admin configuration survived a process restart without changing source; version1 export/import preserved the profile/logo, a verified SQLite backup restored its settings, and individual/consolidated/mixed invoice PDFs rendered. Institution-identifier and image-metadata checks passed before the initial commit. Five exact synthetic credential findings are individually reviewed; no test directory is excluded.
+The isolated copy passed 208 backend tests, 60 frontend tests and 12 helper tests, plus a production frontend build and fresh migration check. Synthetic Admin configuration survived a process restart without changing source; version 1 export/import preserved the profile/logo, a verified SQLite backup restored its settings, and individual/consolidated/mixed invoice PDFs rendered. Institution-identifier and image-metadata checks passed before the initial commit. Five exact synthetic credential findings are individually reviewed; no test directory is excluded.
 
 Windows and Linux operating-system installation procedures, physical printing/device scanning and public deployment were not certified by these checks. Python tests used an existing compatible dependency environment against an isolated new database; frontend packages were installed from the lockfile. No tasks, firewall rules or live installation were changed.
 

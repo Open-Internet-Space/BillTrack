@@ -1,6 +1,6 @@
 # Development and testing
 
-All new development happens in **`E:\BillTrack-Clean`**, the main source repository published to GitHub. **`E:\EstateManagement` is the live office installation.** Develop and test outside it; deploy tested, compatible changes into it.
+Clone [Open-Internet-Space/BillTrack](https://github.com/Open-Internet-Space/BillTrack) into a development folder of your choice. Use a separate working directory and environment for the live installation.
 
 For an explanation of these roles, see [Setup and updates](SETUP.md). For first-time Python and browser setup, see [Windows setup](SETUP-WINDOWS.md) or [Linux setup](SETUP-LINUX.md).
 
@@ -14,7 +14,7 @@ Use [the component map](COMPONENT-MAP.md) to find the files for the feature you 
 
 ## 2. Run the Python checks
 
-From `E:\BillTrack-Clean` in PowerShell, after setting up the separate environment:
+Build and collect the frontend assets as shown below before running Django tests that render pages. Then open PowerShell in your development folder containing `manage.py`:
 
 ```powershell
 .\.venv\Scripts\python.exe manage.py check
@@ -51,7 +51,7 @@ Set-Location ..
 .\.venv\Scripts\python.exe manage.py collectstatic --noinput
 ```
 
-The tests check the browser code; the build produces the files used by the running application. On Linux, use `BUILD_PATH=../frontend_build npm run build` instead of the PowerShell environment-variable steps.
+The tests check the browser code. The build produces the files used by the running application and regenerates the Knowledge Base from its selected Markdown guides. On Linux, use `BUILD_PATH=../frontend_build npm run build` instead of the PowerShell environment-variable steps.
 
 If Windows npm wrappers fail because an installation path contains special characters, use a direct Node invocation of the installed `react-scripts` entry point. Do not change the office folder to work around a development-path error.
 

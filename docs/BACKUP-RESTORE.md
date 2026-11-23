@@ -1,6 +1,6 @@
 # Backups and recovery
 
-A backup is a private copy you can use if records or files are lost. Back up the installation whose data you need: a backup of `E:\BillTrack-Clean` does not protect the real office records in `E:\EstateManagement`.
+Run the backup command from the application folder containing the database you need to protect. To protect office records, use the live installation folder and its own Python environment.
 
 ## What needs protecting?
 
@@ -16,13 +16,13 @@ The standard `scripts/backup.py` tool saves the database, `.env` and supported l
 
 ## Set up a backup destination for a new copy
 
-For a new Windows installation, create a private destination folder on a protected drive, preferably separate from the application drive. In PowerShell opened in that new installation's folder, run the following, replacing the example path with your real destination:
+Create a private backup folder in a location you can write to, preferably on a separate drive. Open PowerShell in the installation folder containing `manage.py` and run:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts/backup.py --configure --destination 'D:\BillTrackBackups'
+.\.venv\Scripts\python.exe scripts/backup.py --configure
 ```
 
-The destination must already exist and be writable. This saves the destination in `instance/backup.json`; it does not set up an automatic schedule. On Linux, use `.venv/bin/python` and an absolute Linux destination path.
+At the prompt, enter the full path of the folder you created. The tool saves the destination in `instance/backup.json`. Automatic scheduling is configured separately. On Linux run `.venv/bin/python scripts/backup.py --configure` and enter the absolute path to your backup folder.
 
 The existing office installation may already have a configured backup task and Python environment. Check its private operating instructions before changing either. These new-copy commands are not instructions to reconfigure the live office backup.
 

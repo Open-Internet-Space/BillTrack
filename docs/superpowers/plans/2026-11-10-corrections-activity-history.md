@@ -9,7 +9,7 @@
 
 ## Global Constraints
 
-- Canonical development repository: E:\BillTrack-Clean; execute in its isolated E:\BillTrack-Activity-History worktree.
+- Canonical development repository: `Open-Internet-Space/BillTrack`. Use an isolated worktree outside the live installation.
 - Preserve ordinary-user permissions, validation and account-security workflows.
 - No live database writes or real email tests. Preserve separate migration chains.
 - Exclude credentials/security values. Audit has no mutation or retention interface.

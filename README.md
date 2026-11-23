@@ -12,12 +12,14 @@ An [Open Internet](https://www.anopeninternet.eu.org/) Project, developed indepe
 
 | Folder | What it is for |
 | --- | --- |
-| `E:\BillTrack-Clean` | The main source repository: make and test all new changes here. This is the version published to GitHub. |
-| `E:\EstateManagement` | The live application the office uses every day. It holds the real records, uploads and private settings. Install tested updates here; do development in the source repository. |
+| Development checkout | Clone or extract BillTrack into a folder you choose. Make and test source changes here. |
+| Live installation | The folder used by the running service. It holds live records, uploads and private settings. Apply only updates tested against that installation's database history. |
+
+These folders can be on any drive. Run commands from the folder containing `manage.py` unless a step specifies another location.
 
 The normal order is: **make a change → test it → publish the source to GitHub → install a compatible update in the office application**. Uploading code to GitHub does not update the office application automatically.
 
-**Important:** the two copies have different database histories. Copying the whole source folder over the live folder can break the office application or overwrite private files. Follow the [setup and update guide](docs/SETUP.md).
+**Important:** the historical EstateManagement installation uses a different database migration history from this repository. Confirm the lineage and protect the live database and private files before updating. Follow the [setup and update guide](docs/SETUP.md).
 
 ## Start here
 
@@ -29,7 +31,7 @@ The normal order is: **make a change → test it → publish the source to GitHu
 
 ## What BillTrack does
 
-BillTrack manages allottees, bills, receipts, payments, penalties and reports. It prints individual, bulk and consolidated invoices. It also includes account approval and recovery, private data export/import, backups and email tools.
+BillTrack manages shops, allotments, expiry alerts, bills, receipts, payments, penalties and reports. Use **Knowledge Base** in the sidebar for staff guides. It prints individual, bulk and consolidated invoices. It also includes account approval and recovery, private data export/import, backups and email tools.
 
 A new installation starts without business records or a default account. Enter your organisation details in **Admin → System Settings** before printing. Uploaded logos and saved details belong to that installation; they are not part of the source published to GitHub.
 

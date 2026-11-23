@@ -1,6 +1,6 @@
 # Use and maintain the office application
 
-`E:\EstateManagement` is the live copy used by the office. It contains real records, uploaded files and private settings. `E:\BillTrack-Clean` is the main source repository, where all new development and testing happen before publication to GitHub.
+Find the live installation folder in **Task Scheduler → the existing BillTrack task → Actions → Start in**. It contains `manage.py`, live records, uploads and private settings. Its drive and path depend on the computer. Use a separate BillTrack checkout for development and testing.
 
 ## Everyday use
 
@@ -44,9 +44,9 @@ Restarting does not require reinstalling the application or replacing its settin
 
 This is work for the developer and the administrator. A normal user should not copy source files into the live folder.
 
-1. **Prepare and test in `E:\BillTrack-Clean`.** Use made-up records and separate test files. Complete the [development checks](DEVELOPMENT.md).
+1. **Prepare and test in your development checkout.** Use made-up records and separate test files. Complete the [development checks](DEVELOPMENT.md).
 2. **Publish the reviewed source to GitHub from that repository.** Check the selected files contain no private data. Publishing alone does not update the office.
-3. **Prepare a compatible office update.** The live database has an older migration history. The developer must keep that history and test any necessary database changes against a protected copy, outside the source repository. Never replace it with the clean repository's initial database setup.
+3. **Prepare a compatible office update.** The historical EstateManagement database has a different migration history. Check the live installation's applied migrations and rehearse the compatible update on a protected copy. Preserve existing migration files and records.
 4. **Write down the update and recovery steps.** Record the source version, changed files, any database changes, required packages and matching browser files. Test how to return to the previous application version while preserving current records. If data must be converted, test that separately before the live update.
 5. **Arrange a maintenance break and make a verified backup.** Keep the live database, uploads, `.env`, local configuration, current source/browser files and startup-task settings. Store the recovery package privately. Follow [Backup and recovery](BACKUP-RESTORE.md).
 6. **Stop the live application using the maintenance steps above.** Install only the prepared update. Preserve the live private files, Python environment and task configuration; apply only the database instructions tested for this installation.

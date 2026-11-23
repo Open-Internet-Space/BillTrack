@@ -5,10 +5,9 @@ feature branch. Production deployment remains separate; see ACTIVITY-HISTORY.md.
 
 ## Intent and scope
 
-Implement the supplied corrections/history specification in the canonical
-`E:\BillTrack-Clean` repository (`Open-Internet-Space/BillTrack`). The current
-EstateManagement worktree is the historical compatibility checkout, not the
-canonical source. The daily installation is `E:\EstateManagement`.
+Implement the corrections and history specification in the canonical
+`Open-Internet-Space/BillTrack` repository. Keep the historical compatibility
+checkout and live office installation in their own directories.
 
 Superusers can correct and delete allottees, bills, payments, email templates,
 visible reminder history, accounts and configurable settings. Keep existing

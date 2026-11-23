@@ -2,7 +2,7 @@
 
 Use this page for a **new copy with an empty database**. If you only want to use the office application, open its usual browser address. To update it, use [Office operation and updates](PRODUCTION-WINDOWS.md).
 
-On this computer, `E:\BillTrack-Clean` is the development source and `E:\EstateManagement` is the live office application. Never run these new-install steps inside the live folder.
+Choose a new folder on an available drive. Keep it separate from any live BillTrack installation.
 
 ## 1. Check what you need
 
@@ -20,9 +20,7 @@ Each command should print a version. If a command is not recognised, install the
 
 ## 2. Open the correct folder
 
-For a new installation on another computer, download the private GitHub source ZIP and extract it into a new folder, or ask the developer to clone the repository. Do not extract it over an existing installation.
-
-For development on this computer, use the existing `E:\BillTrack-Clean` folder. In File Explorer, open the chosen folder, right-click an empty area and choose **Open in Terminal**. Use a PowerShell tab.
+Download the source ZIP for the branch or release you want from [the BillTrack repository](https://github.com/Open-Internet-Space/BillTrack), or clone it into a new folder. Open the extracted or cloned folder in File Explorer, right-click an empty area, and choose **Open in Terminal**. Use a PowerShell tab.
 
 Run:
 
@@ -31,7 +29,7 @@ Get-Location
 Test-Path .\manage.py
 ```
 
-The location must be your new or development folder, and the second command must show `True`. It must not be `E:\EstateManagement`.
+Confirm that the displayed location is your chosen new folder and that the second command returns `True`. Use that folder for the commands below.
 
 ## 3. Install the Python packages
 
@@ -70,7 +68,7 @@ For a new copy, generate its own random key:
 .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-Paste the result after `SECRET_KEY=` in `.env`. Keep it private. Keep `DEBUG=False`, and leave the local-only host settings from `.env.example` for now. Leave optional email and network settings blank until you need them. Check that `WEASYPRINT_DLL_DIRECTORIES` points to the PDF libraries actually installed on this computer.
+Paste the result after `SECRET_KEY=` in `.env`. Keep it private. Keep `DEBUG=False`, and leave the local-only host settings from `.env.example` for now. Leave optional email and network settings blank until you need them. If WeasyPrint needs a DLL search folder, set `WEASYPRINT_DLL_DIRECTORIES` to the actual library folder on this computer. This setting is commented out in `.env.example`.
 
 If the office application also runs on this computer, add `http://localhost:8001,http://127.0.0.1:8001` to the comma-separated `CSRF_TRUSTED_ORIGINS` list in this development copy's `.env`. Port 8001 keeps the test copy separate from the office application on port 8000.
 

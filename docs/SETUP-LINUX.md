@@ -31,7 +31,7 @@ Open `.env` in a text editor. Generate a key for this installation:
 .venv/bin/python -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-Paste it after `SECRET_KEY=` and keep `DEBUG=False`. Keep the local-only host settings initially. Leave optional network and email values blank until configured. The `WEASYPRINT_DLL_DIRECTORIES` example is for Windows; remove that line on Linux.
+Paste it after `SECRET_KEY=` and keep `DEBUG=False`. Keep the local-only host settings initially. Leave optional network and email values blank until configured. Leave `WEASYPRINT_DLL_DIRECTORIES` unset on Linux.
 
 Keep `.env` private and do not replace an existing installation's key during routine updates.
 

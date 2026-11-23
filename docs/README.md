@@ -4,7 +4,7 @@
 
 Superuser corrections and retained before/after snapshots: [Activity log](ACTIVITY-HISTORY.md).
 
-`E:\BillTrack-Clean` is the main source repository for all new development and GitHub publication. `E:\EstateManagement` is the live office installation with real records, uploads and private settings. Develop and test in the first; install tested, compatible updates in the second.
+Develop and test in a separate checkout. The live installation is the folder used by the running service and holds real records, uploads and private settings. Each computer can use different folders and drive letters.
 
 ## Set up or maintain the application
 
@@ -19,7 +19,6 @@ Superuser corrections and retained before/after snapshots: [Activity log](ACTIVI
 
 - [Estate staff workflow](ESTATE-WORKFLOW.md) and [estate API](ESTATE-API.md). The sidebar **Knowledge Base** lists the staff guides.
 - [Changelog](../CHANGELOG.md).
-
 - [Invoice settings](INVOICES-AND-SETTINGS.md), [receipt billing](RECEIPT-BILLING.md), [reports](REPORTS.md) and [lists and filters](LISTS-AND-FILTERS.md).
 - [Manual email drafts](EMAIL-DRAFTS.md) and [email reminders](EMAIL-REMINDERS.md).
 - [Accounts](EMAIL-ACCOUNTS.md), [personal authenticator recovery](TOTP-RECOVERY.md) and [superuser emergency recovery](SUPERUSER-EMERGENCY-TOTP.md).
