@@ -5,6 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from .views.reports import reports
+from .views.invoices.http import extension_fee_demand
 from .estate.api import ShopViewSet, AllotmentViewSet, RequirementViewSet, RentRevisionViewSet, EstateAttentionView
 from .estate.charges import EstateChargeViewSet, ChargePaymentViewSet
 from .estate.security_api import SecurityAccountViewSet, SecurityMovementViewSet
@@ -41,6 +42,7 @@ urlpatterns = [
     path('invoice/bulk/', views.bulk_invoice_view, name='bulk-invoice'),
     path('invoice/<int:bill_id>/', views.invoice_view, name='invoice'),
     path('invoice/<int:bill_id>/format-2/', views.invoice_format2_view, name='invoice-format-2'),
+    path('estate-charges/<int:charge_id>/demand/', extension_fee_demand, name='extension-fee-demand'),
 
     # ViewSets (DRF Router)
     path('', include(router.urls)),

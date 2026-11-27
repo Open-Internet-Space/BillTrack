@@ -44,7 +44,7 @@ class LegacyReviewForm(forms.Form):
     def clean(self):
         data = super().clean()
         if self.bill.billing_policy != 'legacy_receipt' or self.bill.billing_category == 'other':
-            raise ValidationError('Select an unassigned or shop-linked historical bill using the legacy policy.')
+            raise ValidationError('Select an unassigned or linked historical bill using the legacy policy.')
         if self.data.get('action') != self.action:
             raise ValidationError('Review the current assignment and choose its available action.')
         if self.action == 'convert':
@@ -111,7 +111,7 @@ def prepare_review(bill, raw):
     after = review_state(bill)
     receipts = list(bill.payments.order_by('pk').values())
     state = [before, after, timezone.localdate(), Bill.objects.filter(pk=bill.pk).values().get(),
-             receipts, term.uuid, term.shop.uuid, term.award_reference, term.start_date, term.effective_end,
+             receipts, term.uuid, term.shop_id, term.award_reference, term.start_date, term.effective_end,
              list(term.original_award.rent_revisions.order_by('pk').values()), bill.tenant.uuid, bill._penalty_config]
     digest = hashlib.sha256(json.dumps(state, sort_keys=True, default=str).encode()).hexdigest()
     return {'before': before, 'after': after, 'receipts': [

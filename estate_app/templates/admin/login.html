@@ -1,7 +1,8 @@
 {% extends "admin/login.html" %}
+{% load account_features %}
 {% block content %}
   {{ block.super }}
   <p><a href="{% url 'totp-password-reset' %}">Reset password with authenticator code</a></p>
-  <p><a href="{% url 'account-recovery' %}">Reset password by email</a> · <a href="{% url 'account-signup' %}">Create account</a></p>
+  <p><a href="{% url 'account-recovery' %}">Reset password by email</a>{% new_signups_enabled as show_signup %}{% if show_signup %} · <a href="{% url 'account-signup' %}">Create account</a>{% endif %}</p>
   <p><a href="{% url 'account-verify-email' %}">Verify an existing account email</a></p>
 {% endblock %}

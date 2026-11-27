@@ -23,7 +23,6 @@ from .security import required_security
 
 
 class SecurityMovementSerializer(serializers.ModelSerializer):
-    shop_code = serializers.CharField(source='original_award.shop.code',read_only=True)
     tenant_name = serializers.CharField(source='original_award.tenant.name',read_only=True)
     recorded_by_name = serializers.CharField(source='recorded_by.username',read_only=True)
 
@@ -63,10 +62,12 @@ def security_summary(root):
     held = totals['received']-totals['refunded']-totals['applied']-totals['forfeited']
     outstanding = max(Decimal('0'),(root.security_required_amount or Decimal('0'))-totals['received'])
     due = root.security_effective_due_date
-    return {'id':root.pk,'uuid':str(root.uuid),'shop_code':root.shop.code,'tenant':root.tenant_id,
+    return {'id':root.pk,'uuid':str(root.uuid),'register_label':root.register_label,'tenant':root.tenant_id,
         'tenant_name':root.tenant.name,'award_reference':root.award_reference,
         'initial_monthly_rent':f'{root.security_initial_rent:.2f}' if root.security_initial_rent is not None else None,
         'required_amount':f'{root.security_required_amount:.2f}' if root.security_required_amount is not None else None,
+        'timing':root.security_timing, 'offer_date':root.security_offer_date.isoformat() if root.security_offer_date else None,
+        'allotment_order_date':root.letter_issued_on.isoformat(),
         'due_date':root.security_due_date.isoformat() if root.security_due_date else None,
         'extended_due_date':root.security_extended_due_date.isoformat() if root.security_extended_due_date else None,
         'extension_reference':root.security_extension_reference,
@@ -87,7 +88,7 @@ def refund_issues(root):
         latest = latest.renewal
     if latest.effective_end >= timezone.localdate():
         issues.append('The final approved term has not ended.')
-    if not latest.handover_date:
+    if SystemSettings.feature_enabled('allotment_details_enabled') and not latest.handover_date:
         issues.append('Physical handover of the final term is not confirmed.')
     for award in Allotment.objects.filter(tenant_id=root.tenant_id,renewal_of__isnull=True,security_required_amount__isnull=False):
         if Decimal(security_summary(award)['outstanding_requirement'])>0:
@@ -97,7 +98,7 @@ def refund_issues(root):
             issues.append(f'Invoice {bill.invoice_no or bill.pk} is draft or has unresolved dues.')
     for charge in charge_queryset().filter(allotment__tenant_id=root.tenant_id):
         if charge.balance_due>0:
-            issues.append(f'Charge {charge.pk} ({charge.allotment.shop.code}) has unresolved dues.')
+            issues.append(f'Charge {charge.pk} ({charge.allotment.register_label}) has unresolved dues.')
     for item in AllotmentRequirement.objects.filter(allotment__tenant_id=root.tenant_id,applicable=True,verified_on__isnull=True):
         issues.append(f'Term {item.allotment_id}: {item.get_kind_display()} remains unverified.')
     for item in AllotmentRequirement.objects.filter(allotment__tenant_id=root.tenant_id,applicable=True,
@@ -130,6 +131,9 @@ class SecurityDecisionInput(serializers.Serializer):
     reason = serializers.CharField(max_length=2000)
     initial_monthly_rent = serializers.DecimalField(max_digits=10,decimal_places=2,min_value=Decimal('0.01'),required=False)
     required_amount = serializers.DecimalField(max_digits=10,decimal_places=2,min_value=Decimal('0.01'),required=False)
+    timing = serializers.ChoiceField(choices=['before','after'],required=False)
+    offer_date = serializers.DateField(required=False,allow_null=True)
+    pre_order_due_date = serializers.DateField(required=False,allow_null=True)
     extended_due_date = serializers.DateField(required=False,allow_null=True)
     extension_reference = serializers.CharField(max_length=250,required=False,allow_blank=True)
     amount = serializers.DecimalField(max_digits=10,decimal_places=2,min_value=Decimal('0.01'),required=False)
@@ -160,6 +164,17 @@ def prepare_security_decision(root,data,actor,operation_id):
     movement = receipt = None
     issues = []
     if data['action']=='requirement':
+        timing = data.get('timing', root.security_timing)
+        if timing != root.security_timing:
+            root.security_due_date = None
+        root.security_timing = timing
+        if timing == 'before':
+            root.security_offer_date = data.get('offer_date', root.security_offer_date)
+            root.security_due_date = data.get('pre_order_due_date', root.security_due_date)
+        else:
+            if data.get('offer_date') or data.get('pre_order_due_date'):
+                raise ValidationError('Offer dates and offer deadlines apply only to pre-order deposits.')
+            root.security_offer_date = None
         root.security_initial_rent = data['initial_monthly_rent']
         root.security_required_amount = data.get('required_amount',required_security(data['initial_monthly_rent']))
         root.security_requirement_reference,root.security_requirement_reason = data['reference'],data['reason']
@@ -216,7 +231,7 @@ def prepare_security_decision(root,data,actor,operation_id):
     if receipt:
         target = receipt.bill if isinstance(receipt,Payment) else receipt.charge
         interest = receipt.penalty_paid if isinstance(receipt,Payment) else Decimal('0')
-        settlement = {'target':target.pk,'shop_code':target.allotment.shop.code,
+        settlement = {'target':target.pk,'register_label':target.allotment.register_label,
             'label':target.invoice_no if isinstance(receipt,Payment) else target.authority_reference,
             'principal_applied':f'{receipt.amount:.2f}','interest_applied':f'{interest:.2f}',
             'principal_remaining':f'{target.balance_due-receipt.amount:.2f}'}

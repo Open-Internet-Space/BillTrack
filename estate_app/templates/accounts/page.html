@@ -2,7 +2,9 @@
 {% block page_title %}{{ title }}{% endblock %}
 {% block heading %}{{ title }}{% endblock %}
 {% block account_content %}
-  {% if not available %}
+  {% if signup_closed %}
+    <p class="unavailable" role="status">New signups are currently closed. Contact your administrator for access.</p>
+  {% elif not available %}
     <p class="unavailable" role="status">Email account services are not available. Ask the system administrator. Existing sign-in and configured authenticator recovery remain available.</p>
   {% else %}
     {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
@@ -27,6 +29,6 @@
       {% if verifying %}<p class="help">Need a new code? <a href="?restart=1">Return to the first step</a> and submit your details again. Your attempt limits still apply.</p>{% endif %}
     {% endif %}
   {% endif %}
-  <p class="help"><a href="{% url 'account-recovery' %}">Email recovery</a> · <a href="{% url 'totp-password-reset' %}">Authenticator recovery</a> · <a href="{% url 'account-signup' %}">Create account</a></p>
+  <p class="help"><a href="{% url 'account-recovery' %}">Email recovery</a> · <a href="{% url 'totp-password-reset' %}">Authenticator recovery</a>{% if new_signups %} · <a href="{% url 'account-signup' %}">Create account</a>{% endif %}</p>
   <p class="help"><a href="{% url 'account-authenticator' %}">Set up your authenticator</a> while you know your current password.</p>
 {% endblock %}

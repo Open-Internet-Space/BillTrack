@@ -3,7 +3,20 @@ import { useEffect, useRef, useState } from "react";
 import API from "../../api";
 import "./email-drafts.css";
 
-const warning = "Draft only. Copy into your mailbox, review recipients and amounts, attach invoices if required, then send.";
+const warning = "Review the recipients and amounts, then open the draft in Gmail or copy it into your mailbox.";
+
+function gmailComposeUrl(draft, includeBody = true) {
+  const addresses = value => (value || "").split(/[,;]/).map(address => address.trim()).filter(Boolean);
+  const to = addresses(draft.to).map(address => encodeURIComponent(address).replace(/%40/g, "@")).join(",");
+  const headers = new URLSearchParams({
+    cc: addresses(draft.cc).join(","),
+    bcc: addresses(draft.bcc).join(","),
+    subject: draft.subject,
+  });
+  if (includeBody) headers.set("body", draft.body.replace(/\r\n|\r|\n/g, "\r\n"));
+  const mailto = `mailto:${to}?${headers.toString().replace(/\+/g, "%20")}`;
+  return `https://mail.google.com/mail/?extsrc=mailto&url=${encodeURIComponent(mailto)}`;
+}
 
 export function EmailDrafts({ context, tenants, onDirty, onBusy }) {
   const [templates, setTemplates] = useState([]);
@@ -86,6 +99,8 @@ export function EmailDrafts({ context, tenants, onDirty, onBusy }) {
   const change = (field, value) => { setDraft(previous => ({ ...previous, [field]: value })); setDirty(true); };
   const changeSelection = ids => { setSelected(ids); if (draft) { setDirty(true); setNeedsGeneration(true); } };
   const missing = selected.filter(id => !bills.some(bill => bill.id === id));
+  const gmailUrl = draft && !needsGeneration && !busy && draft.to.trim() ? gmailComposeUrl(draft) : "";
+  const bodyTooLong = gmailUrl.length > 8000;
 
   return <section className="email-drafts" aria-busy={busy}>
     <div className="page-toolbar"><h1 className="page-title">Email Drafts</h1></div>
@@ -117,9 +132,14 @@ export function EmailDrafts({ context, tenants, onDirty, onBusy }) {
       {draft && <div className="draft-editor">
         <p>Amounts captured: {new Date(draft.calculated_at).toLocaleString()}. Review current amounts before sending.</p>
         {!draft.to.trim() && <p role="alert">The To address is missing. Enter the vendor's address before sending from your mailbox.</p>}
-        {[["to", "To"], ["cc", "CC"], ["subject", "Subject"], ["body", "Body"]].map(([field, label]) => <div className="draft-email-field" key={field}>
+        {gmailUrl && <>
+          <a className="btn-primary gmail-compose" href={bodyTooLong ? gmailComposeUrl(draft, false) : gmailUrl}
+            target="_blank" rel="noopener noreferrer">Open in Gmail</a>
+          <p>{bodyTooLong ? "Use Copy Body and paste the message in Gmail, then attach the signed bill." : "Attach the signed bill in Gmail before sending."}</p>
+        </>}
+        {[["to", "To"], ["cc", "CC"], ["bcc", "BCC"], ["subject", "Subject"], ["body", "Body"]].map(([field, label]) => <div className="draft-email-field" key={field}>
           <div className="draft-field-heading"><label htmlFor={`draft-${field}`}>{label}</label><button type="button" className="btn-ghost" disabled={needsGeneration} onClick={() => copy(field, label)}>Copy {label}</button></div>
-          {field === "body" ? <textarea id={`draft-${field}`} className="inp" rows={18} maxLength={100000} value={draft[field]} onChange={event => change(field, event.target.value)} /> : <input id={`draft-${field}`} className="inp" type="text" maxLength={field === "subject" ? 240 : 2000} value={draft[field]} onChange={event => change(field, event.target.value)} />}
+          {field === "body" ? <textarea id={`draft-${field}`} className="inp" rows={18} maxLength={100000} value={draft[field]} onChange={event => change(field, event.target.value)} /> : <input id={`draft-${field}`} className="inp" type="text" maxLength={field === "subject" ? 240 : 2000} value={draft[field] || ""} onChange={event => change(field, event.target.value)} />}
         </div>)}
         <p>Temporary email only. Editing this text does not change the saved template.</p>
       </div>}

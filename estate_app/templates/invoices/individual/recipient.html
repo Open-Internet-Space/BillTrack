@@ -1,0 +1,10 @@
+<div class="meta-block">
+  <div class="meta-label">Billed To</div>
+  <div class="meta-line"><span class="recipient-name">{{ recipient.name }}</span></div>
+  {% if recipient.allotment_description %}<div class="meta-line"><span class="recipient-description">{{ recipient.allotment_description }}</span></div>{% endif %}
+  <div class="meta-line"><span class="meta-key">Type</span><span class="meta-val">{{ recipient.type }}</span></div>
+  <div class="meta-line"><span class="meta-key">Address</span><span class="meta-val">{% if recipient.address_not_provided %}Not Provided{% else %}{{ recipient.address|default:"Not Provided" }}{% endif %}</span></div>
+  <div class="meta-line"><span class="meta-key">GSTIN</span><span class="meta-val">{% if recipient.gstin_not_provided %}Not Provided{% else %}{{ recipient.gstin|default:"-" }}{% endif %}</span></div>
+  <div class="meta-line"><span class="meta-key">Contact</span><span class="meta-val">{% if recipient.contact_not_provided %}Not Provided{% else %}{{ recipient.contact|default:"-" }}{% endif %}</span></div>
+  <div class="meta-line"><span class="meta-key">Email</span><span class="meta-val">{% if recipient.email_not_provided %}Not Provided{% else %}{{ recipient.email|default:"-" }}{% endif %}</span></div>
+</div>

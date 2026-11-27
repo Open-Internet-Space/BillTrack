@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from estate_app.models import ActivityEntry, Allotment, Bill, RentRevision, Shop, SystemSettings, Tenant
+from estate_app.models import ActivityEntry, Allotment, Bill, Payment, RentRevision, Shop, SystemSettings, Tenant
 from estate_app.tests.transaction_case import ActivityTransactionTestCase
 
 
@@ -63,7 +63,7 @@ class EstateBillingTests(TestCase):
             'holiday_start_date': '2026-06-10', 'holiday_end_date': '2026-06-19', 'rent': '1.00'}, format='json')
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.data['rent'], '2000.00')
-        self.assertEqual(response.data['shop_code'], 'A-101')
+        self.assertEqual(response.data['tenant_display_name'], self.tenant.display_name)
         response = self.api.post('/api/bills/', {**payload, 'billing_category': 'other',
             'notes': 'Reviewed non-shop monthly charge'}, format='json')
         self.assertEqual(response.status_code, 201, response.data)
@@ -80,6 +80,22 @@ class EstateBillingTests(TestCase):
         shop.code = 'CHANGED-CODE'
         with self.assertRaises(ValidationError):
             shop.save()
+
+    def test_inactive_allottee_cannot_raise_a_new_bill_but_keeps_history(self):
+        existing_bill = self.bill(self.terms[0], month=5)
+        url = f'/api/tenants/{self.tenant.pk}/'
+        payload = {'tenant': self.tenant.pk, 'allotment': self.terms[0].pk,
+                   'month': 6, 'year': 2026, 'full_month_rent': '3000'}
+        response = self.api.patch(url, {'active': False, 'change_reason': 'Reviewed status change'}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        response = self.api.post('/api/bills/', payload, format='json')
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn('active allottee', str(response.data['tenant']))
+        self.assertTrue(Bill.objects.filter(pk=existing_bill.pk).exists())
+        response = self.api.patch(url, {'active': True, 'change_reason': 'Approved return'}, format='json')
+        self.assertEqual(response.status_code, 200, response.data)
+        response = self.api.post('/api/bills/', payload, format='json')
+        self.assertEqual(response.status_code, 201, response.data)
 
     def range_payload(self, **changes):
         values = dict(tenant=self.tenant.pk, allotment=self.terms[0].pk, full_month_rent='3100',
@@ -182,30 +198,51 @@ class EstateBillingTests(TestCase):
             'holiday_start_date': None, 'holiday_end_date': None, 'change_reason': 'Attempt to erase basis'}, format='json')
         self.assertEqual(response.status_code, 400)
 
-    def test_invoices_split_shop_terms_and_print_only_manual_waiver_notes(self):
+    def test_invoices_keep_award_references_internal_and_print_manual_notes(self):
         from django.template.loader import render_to_string
         from estate_app.views import consolidated_invoice_context, invoice_context, selected_invoice_contexts
         first = self.bill(self.terms[0], full_month_rent=Decimal('3000'),
                           holiday_start_date=dt.date(2026, 6, 10), holiday_end_date=dt.date(2026, 6, 19))
         second = self.bill(self.terms[1], full_month_rent=Decimal('4000'))
         later = self.bill(self.terms[0], month=7)
-        groups = selected_invoice_contexts([first, second, later])
-        self.assertEqual(len(groups), 2)
-        self.assertIsNone(consolidated_invoice_context([first, second]))
+        legacy = Bill.objects.create(tenant=self.tenant, month=5, year=2026, rent=100)
+        groups = selected_invoice_contexts([first, second, later, legacy])
+        self.assertEqual(len(groups), 1)
+        self.assertTrue(groups[0]['consolidated'])
+        self.assertEqual(groups[0]['invoice']['bills'], [legacy, first, second, later])
         context = consolidated_invoice_context([first, later])
-        self.assertEqual(context['shop_code'], 'A-101')
         self.assertEqual(context['line_items'][0]['holiday_waiver'], '1,000.00')
         html = render_to_string('invoice_format2.html', invoice_context(first))
-        self.assertIn('A-101', html)
+        self.assertNotIn('Award reference', html)
+        self.assertNotIn('Award A-101', html)
         self.assertNotIn('Holiday closure', html)
         self.assertIn('2,000.00', html)
         first.notes = "Office reviewed closure.\nSee case file <42>."
         html = render_to_string('invoice_format2.html', invoice_context(first))
         self.assertIn('Office reviewed closure.<br>See case file &lt;42&gt;.', html)
-        bulk = render_to_string('bulk_invoice.html', {'print_invoices': selected_invoice_contexts([first, second])})
-        self.assertTrue('A-101' in bulk and 'N-401' in bulk)
+        bulk = render_to_string('bulk_invoice.html', {'print_invoices': selected_invoice_contexts([first, second, later, legacy])})
+        self.assertEqual(bulk.count('Consolidated Month-wise Charges'), 1)
+        self.assertNotIn('Current Month Charges', bulk)
+        self.assertNotIn('Award reference', bulk)
+        self.assertNotIn('Award A-101', bulk)
+        self.assertNotIn('Award N-401', bulk)
         self.assertIn('Office reviewed closure.', bulk)
         self.assertNotIn('Holiday closure', bulk)
+
+    def test_consolidated_print_applies_credits_and_older_dues_within_each_term(self):
+        from estate_app.views import consolidated_invoice_context
+
+        self.bill(self.terms[0], month=1, full_month_rent=Decimal('30'), issue_date=dt.date(2026, 1, 1))
+        first = self.bill(self.terms[0], month=2)
+        second = self.bill(self.terms[1], month=3)
+        Payment.objects.create(bill=first, amount=Decimal('150'), payment_date=dt.date(2026, 2, 1))
+
+        context = consolidated_invoice_context([first, second])
+        self.assertEqual(context['previous_balance'], '30.00')
+        self.assertEqual(context['balance_due'], '100.00')
+        self.assertEqual(context['excess_paid'], '50.00')
+        self.assertEqual(context['credit_applied'], '30.00')
+        self.assertEqual(context['total_payable'], '100.00')
 
 
 class EstateBillingMigrationTests(ActivityTransactionTestCase):

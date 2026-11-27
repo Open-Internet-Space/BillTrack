@@ -26,7 +26,7 @@ class PrivateConfigurationTests(TestCase):
     def test_initial_schema_is_fresh_and_does_not_seed_business_or_users(self):
         from django.db import connection
         from django.db.migrations.loader import MigrationLoader
-        self.assertEqual(MigrationLoader(connection).graph.leaf_nodes('estate_app'),[('estate_app','0017_security_decision_operation')])
+        self.assertEqual(MigrationLoader(connection).graph.leaf_nodes('estate_app'),[('estate_app','0029_allotment_exception_reason')])
         self.assertFalse(User.objects.exists())
         self.assertFalse(Tenant.objects.exists())
         self.assertFalse(Bill.objects.exists())

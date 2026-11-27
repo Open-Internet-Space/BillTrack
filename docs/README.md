@@ -18,6 +18,7 @@ Develop and test in a separate checkout. The live installation is the folder use
 ## Use BillTrack
 
 - [Estate staff workflow](ESTATE-WORKFLOW.md) and [estate API](ESTATE-API.md). The sidebar **Knowledge Base** lists the staff guides.
+- [Extensions and security deposits](EXTENSIONS-AND-SECURITY-DEPOSITS.md). Raise extension fees, link terms, and review and carry forward deposits.
 - [Changelog](../CHANGELOG.md).
 - [Invoice settings](INVOICES-AND-SETTINGS.md), [receipt billing](RECEIPT-BILLING.md), [reports](REPORTS.md) and [lists and filters](LISTS-AND-FILTERS.md).
 - [Manual email drafts](EMAIL-DRAFTS.md) and [email reminders](EMAIL-REMINDERS.md).

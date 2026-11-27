@@ -42,6 +42,35 @@ class InvoicePrintSelectionTests(TestCase):
         self.assertContains(response, 'Current Month Charges')
         self.assertNotContains(response, 'Consolidated Month-wise Charges')
 
+    def test_other_monthly_charge_reason_is_internal_in_all_invoice_layouts(self):
+        charge = Bill.objects.create(tenant=self.first.tenant, month=6, year=2026, rent=125,
+                                     billing_category='other', notes='Internal reason for monthly charge')
+        self.first.notes = 'Customer-facing bill note'
+        self.first.save(update_fields=['notes'])
+
+        for response in (self.client.get(f'/api/invoice/{charge.pk}/', HTTP_HOST='localhost'),
+                         self.print_selected(charge), self.print_selected(charge, self.first)):
+            self.assertNotContains(response, charge.notes)
+            self.assertContains(response, '125.00')
+        self.assertContains(self.print_selected(charge, self.first), self.first.notes)
+
+    def test_allotment_description_prints_under_recipient_in_each_layout(self):
+        description = 'Service counter <East> & Annexe'
+        tenant = self.first.tenant
+        tenant.allotment_description = description
+        tenant.save(update_fields=['allotment_description'])
+        expected = '<div class="meta-line"><span class="recipient-name">Print Tenant</span></div>' \
+                   '<div class="meta-line"><span class="recipient-description">' \
+                   'Service counter &lt;East&gt; &amp; Annexe</span></div>'
+        for response in (
+            self.client.get(f'/api/invoice/{self.first.pk}/', HTTP_HOST='localhost'),
+            self.print_selected(self.first),
+            self.print_selected(self.first, self.second, self.other),
+        ):
+            self.assertContains(response, expected, count=1, html=True)
+            self.assertContains(response, '<span class="recipient-description">', count=1)
+        self.assertNotContains(self.print_selected(self.other), '<span class="recipient-description">')
+
     def test_repeated_bill_id_does_not_duplicate_charges_or_consolidate_one_month(self):
         response = self.print_selected(self.first, self.first)
         self.assertContains(response, 'Current Month Charges', count=1)

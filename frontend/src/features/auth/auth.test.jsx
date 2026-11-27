@@ -6,7 +6,7 @@ test("login shows BillTrack branding and labeled sign-in fields", () => {
   const root = createRoot(container);
   act(() => root.render(<App />));
   expect(container.querySelector('img[alt="BillTrack"]').getAttribute("src")).toBe("/static/billtrack-icon.png");
-  expect(container.querySelector('.login-visual img').getAttribute("src")).toBe("/static/billtrack-logo.png");
+  expect(container.querySelector('.login-visual img').getAttribute("src")).toBe("/static/billtrack-logo.webp");
   expect(container.querySelector('input[autocomplete="username"]')).not.toBeNull();
   expect(container.querySelector('input[autocomplete="current-password"]')).not.toBeNull();
   expect(container.querySelector('a[href="/accounts/signup/"]').textContent).toBe('Create account');

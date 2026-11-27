@@ -24,6 +24,7 @@ class Tenant(models.Model):
     uuid       = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     name       = models.CharField(max_length=200, help_text="Allottee/Business name")
     allotment_description = models.CharField(max_length=200, blank=True, default='', validators=[RegexValidator(r'\A[^\r\n]*\Z', 'Use one line for the allotment description.')], help_text='Optional identifier, for example Shop 12, Market Block. Shown beside the name in lists and selectors.')
+    contract_draft = models.JSONField(default=dict, blank=True, editable=False)
     type       = models.CharField(max_length=50)
     contact    = models.CharField(max_length=20, blank=True)
     contact_not_provided = models.BooleanField(default=False, verbose_name='Contact: Not Provided')

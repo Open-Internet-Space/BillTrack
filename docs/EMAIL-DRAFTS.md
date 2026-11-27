@@ -4,7 +4,7 @@ BillTrack saves **named reusable templates**, not allottee-specific emails. Like
 
 ## Save reusable wording
 
-Admin → Email templates allows adding, editing, disabling or deleting named templates. Three generic templates are installed once: Invoice covering letter, Payment reminder and Overdue notice. Save wording with placeholders, rather than real vendor details. Each template can be used for any allottee.
+**Admin → Email templates** lets administrators manage reusable wording. BillTrack includes **Invoice covering letter**, **Payment reminder** and **Overdue notice**. A template can specify its own CC addresses. Mark attachment-dependent templates, such as **Demand of dues**, **Manual only** to keep them out of the reminder sender.
 
 Use **Insert placeholder** above the form: choose Subject or Body, choose a labelled field with its description, and click Insert placeholder. Clicking inside Subject or Body selects that destination automatically. The field is inserted at the cursor or replaces selected text. Save the template afterward. Multiline fields are offered for the Body only.
 
@@ -17,18 +17,22 @@ Subject and body accept these literal placeholders:
 | `{organisation_name}` | Private organisation name from System Settings |
 | `{signing_authority}` | Private signing authority |
 | `{preparation_date}` | Date of generation |
+| `{billing_start_month}` | Earliest month and year among the selected bills |
+| `{billing_end_month}` | Latest month and year among the selected bills |
 | `{bill_details}` | Selected references, periods, receipt/due status and remaining principal/penalty |
 | `{outstanding_total}` | Outstanding total for selected bills in INR |
 
 For example, subject `Payment reminder for {allottee_name}` and body `Dear {allottee_name},` followed by `{bill_details}`. Use `{{` and `}}` for literal braces. HTML, expressions, attribute access, formatting instructions and template code are not executed. Subjects must expand to one line; put bill details in the body. Wording never changes billing calculations.
 
-Admin → System Settings → Manual email drafts stores default CC addresses. Templates and CC settings stay in private SQLite, outside source control. Only administrators with the appropriate model permissions can change saved templates.
+**Admin → System Settings → Manual email drafts** stores default CC and BCC addresses. Templates and recipient settings stay in private SQLite, outside source control. Only administrators with the appropriate model permissions can change saved templates.
 
 ## Merge, edit and copy
 
-Use **Allottees → Email Draft**, or select bills for one allottee in **Bills → Draft Email**. The Email Drafts navigation item also opens the workspace. Allottee drafts start with outstanding bills; change the selection to include settled bills for a covering letter or no bills for a general email. Multiple allottees cannot share one email. Inactive allottees can still have correspondence prepared.
+You can also select bills for one allottee in **Bills → Draft Email**. Allottee drafts start with outstanding bills. Change the selection to include settled bills for a covering letter, or clear it for a general email. Inactive allottees can still have correspondence prepared.
 
-Choose a saved template and allottee. Expand **Saved template wording (before merge)** to see placeholders. Generate Draft fills in current details. Review and edit To, CC, Subject and Body. These case-specific edits are temporary and do not update the saved template. Missing vendor email is clearly warned about. Enter email addresses rather than display-name syntax; default CC addresses accept comma or semicolon separators.
+Choose **Prepare Gmail** in the allottee’s Actions, or open **Email Drafts** from the sidebar. Choose the bills and a saved template, then choose **Generate Draft**. **Demand of dues** uses the selected billing months and the saved allotment description. Review and edit To, CC, BCC, Subject and Body. BillTrack takes To from the allottee’s saved email. It uses template CC addresses when provided and otherwise uses the System Settings default. BCC comes from System Settings. Case-specific edits are temporary.
+
+Choose **Open in Gmail** to open a compose window in a new tab. Verify the sender and recipients, attach the signed bill, and send from Gmail. For a long message, use **Copy Body** and paste it into Gmail before attaching the bill.
 
 Copy each field into the official mailbox, attach invoices manually if needed, check current amounts and recipients, then send there. Copy buttons report success; if clipboard access is unavailable (including some LAN HTTP browsers), the field is selected for Ctrl+C or the device Copy command. BillTrack cannot confirm that the email was sent.
 
@@ -40,7 +44,7 @@ There is no saved merged-email list or history. Closing/reloading discards the t
 
 ## Backups and development
 
-Full SQLite backups preserve saved templates and default CC addresses. Business-data JSON exports omit templates; they include default CC as part of System Settings. No merged email needs backup because it is never persisted.
+Full SQLite backups preserve saved templates and default CC and BCC addresses. Business-data JSON exports include the recipient settings as part of System Settings and omit templates. Generated drafts in BillTrack are temporary.
 
 This change adds schema migration 0002_email_templates to the clean BillTrack lineage. It is not a migration from the historical EstateManagement database. Development does not alter the daily installation.
 

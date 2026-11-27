@@ -165,7 +165,8 @@ class Bill(models.Model):
         if self.billing_policy != 'notices_368_369' or not self.allotment_id:
             return
         from ..estate.billing import annual_revisions, rent_schedule
-        if refresh or self.rate_snapshot is None or self.area_snapshot is None:
+        flat = self.allotment.rent_basis == 'flat'
+        if refresh or self.rate_snapshot is None or (not flat and self.area_snapshot is None):
             try:
                 schedule = rent_schedule(self.allotment, self.year, self.month)
             except ValidationError:
@@ -177,16 +178,16 @@ class Bill(models.Model):
             self.rent_revision_id = schedule['revision_id']
             self.rate_snapshot, self.area_snapshot = schedule['rate'], schedule['area']
             self.rent_revision_reference = schedule['approval_reference']
-        expected = (self.rate_snapshot * self.area_snapshot).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        expected = (self.rate_snapshot if flat else self.rate_snapshot * self.area_snapshot).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         if self.full_month_rent is None:
             self.full_month_rent = expected
         if self.full_month_rent != expected and not self.rent_override_reason.strip():
-            raise ValidationError({'rent_override_reason': 'Explain the reviewed difference from approved rate × actual area.'})
+            raise ValidationError({'rent_override_reason': 'Explain the reviewed difference from the approved full-month charge.'})
         if self.rent_revision_id:
             if self.rent_revision.original_award_id != self.allotment.original_award.pk:
                 raise ValidationError({'rent_revision': 'The rate must belong to this original award.'})
             through = datetime.date(self.year, self.month, calendar.monthrange(self.year, self.month)[1])
-            missing = annual_revisions(self.rate_snapshot, self.rent_revision.effective_date, through)
+            missing = annual_revisions(self.rate_snapshot, self.rent_revision.effective_date, through, flat=flat)
             if self.raised_date and missing and not self.rate_exception_reference.strip():
                 raise ValidationError({'rate_exception_reference': 'Approve the missing April revision before final issue, or record its authorized exception.'})
 

@@ -22,7 +22,7 @@ export function LoginScreen({ onLogin, toast, onDismissError, authState, onRetry
         <section className="login-brand" aria-label="BillTrack billing portal">
           <div className="login-visual" aria-hidden="true">
             <div className="login-visual-back" />
-            <img src="/static/billtrack-logo.png" alt="" />
+            <img src="/static/billtrack-logo.webp" alt="" />
           </div>
           <h1>Every bill. Every payment. In view.</h1>
           <ProjectIdentity />
@@ -40,7 +40,7 @@ export function LoginScreen({ onLogin, toast, onDismissError, authState, onRetry
             <button type="submit" disabled={pending}>{pending ? "Signing in…" : <>Sign in <span aria-hidden="true">→</span></>}</button>
             <a className="login-recovery" href="/admin/password-reset/totp/">Forgot password? Use authenticator</a>
             <a className="login-recovery" href="/accounts/password-reset/">Reset password by email</a>
-            <a className="login-recovery" href="/accounts/signup/">Create account</a>
+            {document.getElementById("root")?.dataset.newSignups !== "off" && <a className="login-recovery" href="/accounts/signup/">Create account</a>}
             <a className="login-recovery" href="/accounts/verify-email/">Verify an existing account email</a>
           </form>}
         </section>

@@ -11,7 +11,7 @@ from ..models import (Allotment,AllotmentRequirement,Bill,EstateCharge,EstateCha
                       Payment,RentRevision,SecurityMovement,Shop,SystemSettings)
 from ..models.estate import yearly_end
 from ..estate.billing import annual_revisions
-from ..estate.security import required_security,validate_security_pair
+from ..estate.security import required_security,validate_security_pair,validate_security_timing
 
 
 def require(condition,message):
@@ -48,14 +48,17 @@ def validate_graph(objects):
     for term in terms:
         chain=term._lineage()
         require(len(chain)<=3,'An award permits only two extensions.')
-        require(term.actual_area>0 and term.end_date>=term.start_date,'Invalid allotment area or dates.')
+        term.validate_rent_basis()
+        require(term.end_date>=term.start_date,'Invalid allotment dates.')
         require(term.start_date>=term.letter_issued_on or term.exception_reference.strip(),'An earlier term start requires approved authority.')
+        require(not term.exception_reason.strip() or term.exception_reference.strip(),'A date exception reason requires an approval reference.')
         require(not term.termination_date or term.start_date<=term.termination_date<=term.end_date,'Invalid effective termination date.')
         for date,ref in [('termination_date','termination_reference'),('possession_date','possession_reference'),
                          ('handover_date','handover_reference'),('vacation_deadline','vacation_reference')]:
             require(bool(getattr(term,date))==bool(getattr(term,ref).strip()),'Term dates and evidence references must be recorded together.')
         if term.possession_date:
             require(term.start_date<=term.possession_date<=min(today,term.effective_end),'Invalid actual possession date.')
+        if term.shop_id and term.possession_date:
             require((term.shop.availability_confirmed_on and term.shop.availability_confirmed_on<=term.possession_date)
                 or any(peer.shop_id==term.shop_id and peer.pk!=term.pk and peer.handover_date and peer.handover_date<term.possession_date for peer in terms),
                 'Possession requires earlier availability or handover evidence.')
@@ -68,12 +71,14 @@ def validate_graph(objects):
             require(term.renewal_of_id not in successors,'A preceding term cannot have two renewals.')
             successors.add(term.renewal_of_id)
             require((term.shop_id,term.tenant_id)==(previous.shop_id,previous.tenant_id),'Renewal ownership differs from the preceding term.')
+            require(term.rent_basis==previous.rent_basis,'A renewal retains the original charge basis.')
             require(term.start_date>previous.effective_end and term.approval_reference.strip() and term.performance_reference.strip(),
                     'Renewal needs nonoverlapping dates, approval and performance evidence.')
             maximum=yearly_end(term.start_date)
         else:
-            key=(term.shop_id,term.award_reference)
-            require(key not in awards,'Duplicate original award reference for a shop.')
+            require(not term.carry_forward_deposit, 'Only a renewal can record deposit carry-forward.')
+            key=(term.record_scope,term.award_reference)
+            require(key not in awards,'Duplicate original award reference in the allotment history.')
             awards.add(key)
             maximum=yearly_end(term.letter_issued_on)
         require(term.end_date<=maximum or term.exception_reference.strip(),'A longer term needs its approved exception.')
@@ -82,8 +87,9 @@ def validate_graph(objects):
                 term.security_required_amount>=required_security(term.security_initial_rent),'Invalid original-award security requirement.')
             require(term.security_due_date and term.security_requirement_reference.strip() and term.security_requirement_reason.strip(),
                     'Security requirements need their original deadline, approval and basis.')
+            validate_security_timing(term)
         else:
-            require(term.security_initial_rent is None and not any((term.security_due_date,term.security_requirement_reference,
+            require(term.security_initial_rent is None and not any((term.security_due_date,term.security_timing,term.security_offer_date,term.security_requirement_reference,
                 term.security_requirement_reason,term.security_extended_due_date,term.security_extension_reference,term.security_last_operation_id)),
                 'Partial security requirement evidence is not sufficient.')
         require(bool(term.security_extended_due_date)==bool(term.security_extension_reference.strip()),'Security extension date and authority must match.')
@@ -94,25 +100,34 @@ def validate_graph(objects):
                     'Refund clearance needs a reviewed requirement, authority and reason.')
     for index,term in enumerate(terms):
         for peer in terms[index+1:]:
-            if term.shop_id!=peer.shop_id:continue
+            if term.record_scope!=peer.record_scope:continue
             require(term.start_date>peer.effective_end or peer.start_date>term.effective_end,'Shop allotment terms overlap.')
-    for shop in grouped[Shop]:
-        periods = sorted(Allotment.possession_periods(term for term in terms if term.shop_id == shop.pk).values(),
-                         key=lambda period: period[0])
+    terms_by_scope = defaultdict(list)
+    for term in terms:
+        terms_by_scope[term.record_scope].append(term)
+    for history in terms_by_scope.values():
+        periods = sorted(Allotment.possession_periods(history).values(), key=lambda period: period[0])
         for (_, end), (start, _) in zip(periods, periods[1:]):
             require(end is not None and start > end, 'Physical possession overlaps.')
     for requirement in grouped[AllotmentRequirement]:
         requirement.clean()
     rates=defaultdict(list)
     for rate in grouped[RentRevision]:
-        require(not rate.original_award.renewal_of_id and rate.rate>0 and rate.approval_reference.strip() and rate.reason.strip(),
+        require(not rate.original_award.renewal_of_id and rate.rate>0 and rate.reason.strip(),
                 'Invalid reviewed original-award rate.')
+        if rate.original_award.rent_basis == 'flat':
+            require(rate.rate==rate.rate.quantize(Decimal('0.01')),'Flat charges use at most two decimal places.')
         rates[rate.original_award_id].append(rate)
     for rows in rates.values():
         rows.sort(key=lambda row:row.effective_date)
+        notice = rows[0].original_award.notice_governed
+        if notice:
+            require(all(rate.approval_reference.strip() for rate in rows), 'Rate approval reference is required.')
         for previous,current in zip(rows,rows[1:]):
             require(current.effective_date>previous.effective_date,'Duplicate rate effective date.')
-            revisions=annual_revisions(previous.rate,previous.effective_date,current.effective_date)
+            if not notice:
+                continue
+            revisions=annual_revisions(previous.rate,previous.effective_date,current.effective_date, flat=current.original_award.rent_basis=='flat')
             require(current.exception_reference.strip() or len(revisions)==1 and
                 revisions[0]['effective_date']==current.effective_date and revisions[0]['rate']==current.rate,'Invalid annual rate progression.')
 
@@ -139,11 +154,13 @@ def validate_graph(objects):
                     and bill.raised_date and bill.dispatch_day>=bill.raised_date and bill.dispatch_sender_id
                     and bill.dispatch_recipient.strip() and bill.dispatch_message_reference.strip(),'Incomplete confirmed dispatch evidence.')
             if bill.rate_snapshot is not None or bill.area_snapshot is not None:
-                require(bill.rate_snapshot is not None and bill.area_snapshot is not None and bill.rate_snapshot>0 and bill.area_snapshot>0,'Incomplete saved rate/area evidence.')
+                require(bill.rate_snapshot is not None and bill.rate_snapshot>0 and (
+                    bill.area_snapshot is None if bill.allotment.rent_basis=='flat'
+                    else bill.area_snapshot is not None and bill.area_snapshot>0),'Invalid saved charge evidence.')
                 require(bill.rent_revision_id and bill.full_month_rent is not None,'Saved rate snapshots require their reviewed revision and original rent.')
             if bill.rent_revision_id:
                 require(bill.rent_revision.original_award_id==bill.allotment.original_award.pk,'Rate belongs to another award.')
-                require(bill.rate_snapshot==bill.rent_revision.rate and bill.area_snapshot is not None,'Saved rate evidence differs from its revision.')
+                require(bill.rate_snapshot==bill.rent_revision.rate,'Saved rate evidence differs from its revision.')
                 bill.prepare_notice_rent()
             else:
                 require(bill.full_month_rent is not None and bill.rent_override_reason.strip() and
@@ -178,7 +195,8 @@ def validate_graph(objects):
     histories=defaultdict(list);applications={}
     for movement in grouped[SecurityMovement]:
         root=movement.original_award
-        require(not root.renewal_of_id and movement.amount>0 and root.letter_issued_on<=movement.effective_date<=today
+        require(not root.renewal_of_id and movement.amount>0 and movement.effective_date<=today
+            and (movement.kind=='received' or movement.effective_date>=root.letter_issued_on)
             and movement.reference.strip() and movement.reason.strip() and movement.recorded_by_id,'Invalid security movement identity, amount or evidence.')
         histories[root.pk].append(movement)
         if movement.kind=='applied':

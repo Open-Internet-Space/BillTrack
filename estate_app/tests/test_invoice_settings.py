@@ -99,6 +99,20 @@ class GlobalInvoiceSettingsTests(TestCase):
             import base64
             self.assertIn('data:image/png;base64,' + base64.b64encode(image.getvalue()).decode('ascii'), html)
 
+    def test_admin_can_switch_premises_on_and_off(self):
+        self.client.force_login(User.objects.create_superuser('features-admin'))
+        url = f'/admin/estate_app/systemsettings/{self.settings.pk}/change/'
+        self.assertContains(self.client.get(url, HTTP_HOST='localhost'), 'Enable Premises')
+        data = model_to_dict(self.settings, exclude=['updated_at', 'updated_by', 'letterhead_logo'])
+        for enabled in (True, False):
+            if enabled:
+                data['premises_enabled'] = 'on'
+            else:
+                data.pop('premises_enabled', None)
+            response = self.client.post(url, {**data, 'change_reason': 'Change estate features'}, HTTP_HOST='localhost')
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(SystemSettings.premises_are_enabled(), enabled)
+
     def test_admin_rejects_non_image_and_oversized_logo(self):
         import io
         from PIL import Image

@@ -1,7 +1,7 @@
 import Pagination, { usePagination } from "../../Pagination";
 import { formatCurrency, formatDate } from "../../shared/format.js";
 
-export function AdjustmentBill({ bill, splits, allSplits, resetKey }) {
+export function AdjustmentBill({ bill, splits, allSplits, resetKey, onEditReceipt }) {
   const pagination = usePagination(splits, resetKey);
   return <div className="card" style={{ padding: 0, marginBottom: 14, overflowX: "auto" }}>
     <div style={{ padding: 16, borderBottom: "1px solid #21262d" }}>
@@ -25,7 +25,12 @@ export function AdjustmentBill({ bill, splits, allSplits, resetKey }) {
       </tr></thead>
       <tbody>{pagination.pageRows.map(p => <tr key={p.id} className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
         <td style={{ padding: "10px 14px" }}>{allSplits.indexOf(p) + 1} of {allSplits.length}</td>
-        <td style={{ padding: "10px 14px" }}>{formatDate(p.payment_date)}</td>
+        <td style={{ padding: "10px 14px" }}>
+          {formatDate(p.payment_date)}
+          {onEditReceipt && p.source !== 'security_application' && <div style={{ marginTop: 6 }}>
+            <button className="btn-ghost" onClick={() => onEditReceipt(p)}>Edit receipt</button>
+          </div>}
+        </td>
         <td style={{ padding: "10px 14px" }}>{p.receipt_no || "—"}<small>{p.source==='security_application'?'Security application — no new cash receipt':'Receipt'}</small></td>
         <td style={{ padding: "10px 14px" }}>{formatCurrency(p.amount)}</td>
         <td style={{ padding: "10px 14px" }}>{formatCurrency(p.penalty_paid)}</td>

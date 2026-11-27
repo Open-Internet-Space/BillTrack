@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from ..activity.admin import CorrectionAdminMixin
 from ..admin_pagination import PaginationAdminMixin
-from ..models import Allotment, AllotmentRequirement, RentRevision, Shop
+from ..models import Allotment, AllotmentRequirement, RentRevision, Shop, SystemSettings
 from ..estate.security import SECURITY_FIELDS
 
 
@@ -10,18 +10,42 @@ from ..estate.security import SECURITY_FIELDS
 class ShopAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
     list_display = ['code', 'name', 'category', 'space_type', 'active', 'occupancy_status']
     list_filter = ['category', 'space_type', 'active']
-    search_fields = ['code', 'name', 'location', 'allotments__tenant__name']
+    search_fields = ['code', 'name', 'location']
     readonly_fields = ['uuid', 'occupancy_status', 'created_at', 'updated_at']
+
+    def has_module_permission(self, request):
+        return SystemSettings.premises_are_enabled() and super().has_module_permission(request)
+
+    def has_view_permission(self, request, obj=None):
+        return SystemSettings.premises_are_enabled() and super().has_view_permission(request, obj)
+
+    def has_add_permission(self, request):
+        return SystemSettings.premises_are_enabled() and super().has_add_permission(request)
+
+    def has_change_permission(self, request, obj=None):
+        return SystemSettings.premises_are_enabled() and super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        return SystemSettings.premises_are_enabled() and super().has_delete_permission(request, obj)
 
 
 @admin.register(Allotment)
 class AllotmentAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
-    list_display = ['shop', 'tenant', 'award_reference', 'start_date', 'end_date', 'status', 'possession_date', 'handover_date']
-    list_filter = ['source_notice', 'shop__category', 'end_date']
-    search_fields = ['shop__code', 'tenant__name', 'award_reference', 'approval_reference']
+    list_display = ['tenant', 'award_reference', 'start_date', 'end_date', 'status', 'possession_date', 'handover_date']
+    list_filter = ['source_notice', 'end_date']
+    search_fields = ['tenant__allotment_description', 'tenant__name', 'award_reference', 'approval_reference']
     readonly_fields = ['uuid', 'status', 'extension_number', 'vacation_due_date', 'created_at', 'updated_at'] + list(SECURITY_FIELDS)
-    autocomplete_fields = ['shop', 'tenant', 'renewal_of']
-    list_select_related = ['shop', 'tenant']
+    def get_exclude(self, request, obj=None):
+        return None if SystemSettings.premises_are_enabled() else ['shop']
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        form_field = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == 'shop':
+            form_field.label = 'Premises (optional)'
+        return form_field
+
+    autocomplete_fields = ['tenant', 'renewal_of']
+    list_select_related = ['tenant']
 
 
 @admin.register(RentRevision)

@@ -19,7 +19,9 @@
 .estate-form { width: 720px; max-width: 100%; }
 .estate-form h2 { font-size: 24px; margin-bottom: 20px; }
 .estate-form h3 { margin: 24px 0 12px; }
-.estate-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.estate-form-grid, .estate-form-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.estate-form-grid { margin-bottom: 18px; }
+.estate-form-pair { grid-column: 1 / -1; }
 .estate-form label { display: block; font-size: 13px; color: #c7cdd5; }
 .estate-form label > .inp { display: block; width: 100%; margin-top: 6px; }
 .estate-form .estate-checkbox { display: flex; align-items: center; gap: 8px; }
@@ -37,7 +39,7 @@
 .dashboard-with-estate .dashboard-sections { min-height: 340px; grid-template-rows: auto minmax(220px, 1fr); }
 .dashboard-with-estate .dashboard-list-card { min-height: 220px; max-height: 420px; }
 @media (max-width: 700px) {
-  .estate-form-grid, .estate-facts { grid-template-columns: minmax(0, 1fr); }
+  .estate-form-grid, .estate-form-pair, .estate-facts { grid-template-columns: minmax(0, 1fr); }
   .estate-attention-entry { flex-direction: column; gap: 6px; }
   .estate-attention-entry > span:last-child { text-align: left; }
 }

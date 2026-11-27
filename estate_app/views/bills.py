@@ -30,7 +30,7 @@ def preview_month(bill, settings, existing=False, recalculate_tax=True):
         if bill.rent_revision_id:
             through = datetime.date(bill.year, bill.month, calendar.monthrange(bill.year, bill.month)[1])
             warnings = [f"April revision needs approval: {item['effective_date'].isoformat()}"
-                        for item in annual_revisions(bill.rate_snapshot, bill.rent_revision.effective_date, through)]
+                        for item in annual_revisions(bill.rate_snapshot, bill.rent_revision.effective_date, through, flat=bill.area_snapshot is None)]
         else:
             warnings = ['Accepted rate schedule is not recorded.']
     bill.due_date = due_date
@@ -75,7 +75,7 @@ class BillViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = Bill.objects.select_related('tenant', 'created_by')
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['tenant', 'allotment', 'allotment__shop', 'billing_category', 'month', 'year', 'status', 'tenant__type']
+    filterset_fields = ['tenant', 'allotment', 'billing_category', 'month', 'year', 'status', 'tenant__type']
     search_fields = ['invoice_no', 'tenant__name', 'tenant__allotment_description', 'allotment__shop__code']
     ordering_fields = ['year', 'month', 'due_date', 'status', 'created_at']
     ordering = ['-year', '-month']

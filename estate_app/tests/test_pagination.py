@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.authtoken.models import TokenProxy
 
-from ..models import Tenant
+from ..models import SystemSettings, Tenant
 
 
 class AdminPaginationTests(TestCase):
@@ -57,6 +57,9 @@ class AdminPaginationTests(TestCase):
         self.assertEqual(len(response.context['cl'].result_list), 2)
 
     def test_every_registered_admin_uses_pagination_including_token_urls(self):
+        settings = SystemSettings.get_settings()
+        settings.premises_enabled = True
+        settings.save(update_fields=['premises_enabled'])
         for model, model_admin in admin.site._registry.items():
             url = reverse(f'admin:{model._meta.app_label}_{model._meta.model_name}_changelist')
             response = self.client.get(url, {'page_size': 15})

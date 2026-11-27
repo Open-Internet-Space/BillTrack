@@ -12,6 +12,7 @@ test('renewal waits for its fee and assessment requires explicit tax evidence', 
   const {container,close}=await signedInApp(fixture);
   try {
     await act(async()=>button(container,'Allotments').click());
+    await act(async()=>button(container,'View term history').click());
     await act(async()=>button(container,'Details').click());
     expect(button(container,'Record renewal').disabled).toBe(true);
     await act(async()=>button(container,'Assess extension fee').click());
@@ -39,6 +40,45 @@ test('charge receipt records actual evidence without a settlement source selecto
     expect(save).toHaveBeenCalledWith(expect.objectContaining({charge:3,amount:'400',receipt_reference:'DD-1'}));
     expect(save.mock.calls[0][0].source).toBeUndefined();
   }finally{act(()=>root.unmount());container.remove();}
+});
+
+test('the extension fee prints its existing charge without saving a bill', async () => {
+  const fee = { id: 2, kind: 'extension_fee', description: 'Second year extension', authority_reference: 'Decision 1',
+    due_date: '2026-12-31', balance_due: '1000', gross_amount: '1000', tax_amount: '0', waiver_amount: '0', amount_paid: '0', payments: [] };
+  const { container, close } = await signedInApp((url, options) => url.includes('/estate-charges/?')
+    ? reply([fee, { ...fee, id: 3, kind: 'incident_fine' }]) : fixture(url, options));
+  const popup = { location: { replace: jest.fn() }, addEventListener: jest.fn(), close: jest.fn() };
+  const open = jest.spyOn(window, 'open').mockReturnValue(popup);
+  const document = jest.spyOn(API, 'document').mockResolvedValue(new Blob(['<h1>Extension fee demand</h1>']));
+  const oldCreate = URL.createObjectURL;
+  URL.createObjectURL = jest.fn(() => 'blob:extension-fee-demand');
+  try {
+    await act(async () => button(container, 'Allotments').click());
+    await act(async () => button(container, 'View term history').click());
+    await act(async () => button(container, 'Details').click());
+    const requestsBeforePrint = global.fetch.mock.calls.length;
+    await act(async () => button(container, 'Print extension fee demand').click());
+    expect(document).toHaveBeenCalledWith('/estate-charges/2/demand/');
+    expect(popup.location.replace).toHaveBeenCalledWith('blob:extension-fee-demand');
+    expect(global.fetch.mock.calls.slice(requestsBeforePrint).some(([, options]) => options.method === 'POST')).toBe(false);
+  } finally { document.mockRestore(); open.mockRestore(); URL.createObjectURL = oldCreate; close(); }
+});
+
+test('only a deletable charge offers a reviewed delete action', async () => {
+  const charge = { id: 2, kind: 'incident_fine', description: 'Duplicate assessment', authority_reference: 'Reference',
+    due_date: '2026-12-31', balance_due: '1000', gross_amount: '1000', tax_amount: '0', waiver_amount: '0', amount_paid: '0', payments: [] };
+  const { container, close } = await signedInApp((url, options) => url.includes('/estate-charges/?')
+    ? reply([{ ...charge, can_delete: true }, { ...charge, id: 3, can_delete: false }]) : fixture(url, options));
+  const remove = jest.spyOn(API, 'delete').mockResolvedValue(null);
+  try {
+    await act(async () => button(container, 'Allotments').click());
+    await act(async () => button(container, 'View term history').click());
+    await act(async () => button(container, 'Details').click());
+    const actions = [...container.querySelectorAll('button')].filter(node => node.textContent === 'Delete charge');
+    expect(actions).toHaveLength(1);
+    await act(async () => actions[0].click());
+    expect(remove).toHaveBeenCalledWith('/estate-charges/2/');
+  } finally { remove.mockRestore(); close(); }
 });
 
 test('financial decision requires a preview and invalidates it after input changes',async()=>{

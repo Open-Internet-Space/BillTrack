@@ -102,6 +102,20 @@ def validate_data(data):
                 raise ValidationError('Security settlements require a complete version 2 estate export.')
         if data['version']==1 and label == 'estate_app.systemsettings':
             fields.setdefault('email_draft_cc', '')
+        if label == 'estate_app.tenant':
+            fields.setdefault('contract_draft', {})
+        if label == 'estate_app.systemsettings':
+            fields.setdefault('email_draft_bcc', '')
+            fields.setdefault('premises_enabled', False)
+            fields.setdefault('allotment_details_enabled', False)
+            for flag in ('new_signups_enabled', 'bill_email_enabled', 'bill_email_copy_enabled'):
+                fields.setdefault(flag, True)
+        if label == 'estate_app.allotment':
+            fields.setdefault('rent_basis', 'area')
+            fields.setdefault('carry_forward_deposit', False)
+            fields.setdefault('security_timing', '')
+            fields.setdefault('security_offer_date', None)
+            fields.setdefault('exception_reason', '')
         expected = {field.name for field in MODEL_MAP[label]._meta.fields if not field.primary_key}
         if set(fields) != expected or record['pk'] in ids[label]:
             raise ValidationError('The export has duplicate records or missing/unknown fields.')

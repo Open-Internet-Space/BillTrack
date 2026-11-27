@@ -25,7 +25,7 @@ class EstateReportingTests(TestCase):
             rent_override_reason='Filed award basis', rate_exception_reference='FILE-9',
             raised_date=dt.date(2026,6,1))
 
-    def test_confirmed_dispatch_drives_shop_labelled_reminder_and_draft(self):
+    def test_confirmed_dispatch_drives_award_labelled_reminder_and_draft(self):
         today = dt.date(2026,6,12)
         self.assertEqual(preview(today)[0], [])
         self.bill.email_dispatched_at = dt.datetime(2026,6,10,9,tzinfo=dt.timezone.utc)
@@ -35,10 +35,11 @@ class EstateReportingTests(TestCase):
         self.bill.save()
         groups, _ = preview(today)
         self.assertEqual(len(groups), 1)
-        self.assertEqual(groups[0]['items'][0]['shop'], self.term.shop.code)
+        self.assertEqual(groups[0]['items'][0]['award'], self.term.award_reference)
         draft = generate(self.term.tenant_id, [self.bill.pk], EmailTemplate(name='Notice', subject='Payment', body='{bill_details}'))
-        for evidence in (self.term.shop.code,self.term.award_reference,'2026-06-08','2026-06-10'):
+        for evidence in (self.bill.invoice_no, '2026-06-08', 'Remaining principal: INR 2000.00'):
             self.assertIn(evidence, draft['body'])
+        self.assertNotIn(self.term.award_reference, draft['body'])
 
     def test_estate_statement_isolates_legacy_and_security_from_shop_dues(self):
         Payment.objects.create(bill=self.bill, amount=200, payment_date=dt.date(2026,6,8))
@@ -50,11 +51,11 @@ class EstateReportingTests(TestCase):
         data = self.api.get('/api/reports/', options)
         self.assertEqual(data.status_code, 200, data.content)
         self.assertEqual(data.json()['totals']['total_due'], '2870.00')
-        scoped = self.api.get('/api/reports/', {**options,'shop':self.term.shop_id}).json()
+        scoped = self.api.get('/api/reports/', {**options,'allotment':self.term.pk}).json()
         for key,expected in {'total_due':'2800.00','holiday_waiver':'1000.00','security_held':'500.00',
                              'received':'200.00','charge_due':'1000.00'}.items():
             self.assertEqual(scoped['totals'][key], expected)
-        historical = self.api.get('/api/reports/', {**options,'shop':self.term.shop_id,'to':'2026-06-07'}).json()
+        historical = self.api.get('/api/reports/', {**options,'allotment':self.term.pk,'to':'2026-06-07'}).json()
         self.assertEqual(historical['totals']['total_due'],'2000.00')
         self.assertEqual(historical['totals']['received'],'0.00')
         term = self.api.get(f'/api/allotments/{self.term.pk}/').json()
@@ -82,7 +83,7 @@ class EstateReportingTests(TestCase):
         groups, _ = preview(today + dt.timedelta(days=1))
         self.assertEqual([item['bill_id'] for group in groups for item in group['items']], [other.pk])
 
-    def test_consolidated_print_keeps_notes_with_their_month_and_shop(self):
+    def test_consolidated_print_keeps_monthly_notes_and_omits_internal_award_references(self):
         profile = SystemSettings.get_settings()
         profile.letterhead_name = 'Synthetic test organisation'
         profile.save()
@@ -105,13 +106,13 @@ class EstateReportingTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get('/api/invoice/bulk/', {'ids': ','.join(str(b.pk) for b in bills)})
         self.assertContains(response, 'Consolidated Month-wise Charges', count=1)
-        self.assertContains(response, 'Current Month Charges', count=2)
-        self.assertContains(response, self.term.shop.code, count=1)
-        self.assertContains(response, other_term.shop.code, count=1)
+        self.assertNotContains(response, 'Current Month Charges')
+        self.assertNotContains(response, self.term.award_reference)
+        self.assertNotContains(response, other_term.award_reference)
         pending = self.api.get('/api/reports/', {'report': 'pending', 'to': '2026-11-12'}).json()
-        self.assertIn('shop', [column['key'] for column in pending['columns']])
-        self.assertEqual({row['shop'] for row in pending['rows']},
-                         {self.term.shop.code, other_term.shop.code, 'Unassigned'})
+        self.assertNotIn('shop', [column['key'] for column in pending['columns']])
+        self.assertEqual({row['award'] for row in pending['rows']},
+                         {self.term.award_reference, other_term.award_reference, 'Unassigned'})
         self.assertNotContains(response, 'Filed rate 42')
         self.assertNotContains(response, 'rent basis')
         self.assertContains(response, 'Jul 2026 note: Reviewed July adjustment', count=1)

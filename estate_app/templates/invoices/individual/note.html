@@ -1,5 +1,5 @@
   <!-- ── PENALTY NOTE ── -->
   <div class="penalty-note">
     <strong>Note:</strong> <span class="note-text">{% if policy_note %}{{ policy_note }}{% else %}{{ invoice_settings.invoice_note|linebreaksbr }}{% endif %}</span>
-    {% if bill.notes %}<div>{{ bill.notes|linebreaksbr }}</div>{% endif %}
+    {% if bill.billing_category != 'other' and bill.notes %}<div>{{ bill.notes|linebreaksbr }}</div>{% endif %}
   </div>

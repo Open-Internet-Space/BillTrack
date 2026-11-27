@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import API from '../../api';
 import { formatCurrency, formatDate } from '../../shared/format';
+import { openPrintDocument } from '../../shared/printDocument';
 import { Field, FormActions } from './EstateForms';
 
 const kinds = {extension_fee:'Extension fee',incident_fine:'Incident fine',damage_recovery:'Damage recovery'};
 const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 
-export function EstateCharges({term,revision,setModal,user,initialCharge}) {
+export function EstateCharges({term,revision,setModal,user,initialCharge,showToast,onDelete,deleting}) {
   const [state,setState]=useState({loading:true,rows:[],error:''});
   const [retry,setRetry]=useState(0);
   useEffect(()=>{
@@ -28,6 +29,10 @@ export function EstateCharges({term,revision,setModal,user,initialCharge}) {
         <p>{charge.description}</p><p>Assessed {formatCurrency(charge.gross_amount)} (tax {formatCurrency(charge.tax_amount)}) · Received {formatCurrency(charge.amount_paid)} · Waived {formatCurrency(charge.waiver_amount)} · {charge.status}</p>
         {charge.waiver_reference && <p>Waiver: {charge.waiver_reference} · {charge.waiver_reason}</p>}
         <div className="estate-actions">{Number(charge.balance_due)>0 && <button className="btn-primary" onClick={()=>setModal({type:'estateChargePayment',charge})}>Record charge receipt</button>}
+          {charge.kind === 'extension_fee' && <button className="btn-ghost" onClick={() =>
+            openPrintDocument(`/estate-charges/${charge.id}/demand/`, showToast, 'extension fee demand')}>Print extension fee demand</button>}
+          {charge.can_delete && <button type="button" className="btn-ghost" disabled={deleting}
+            onClick={() => onDelete(charge.id)}>Delete charge</button>}
           {user?.is_superuser && <><button className="btn-ghost" onClick={()=>setModal({type:'estateChargeDecision',charge,action:'waiver'})}>Review waiver</button><button className="btn-ghost" onClick={()=>setModal({type:'estateChargeDecision',charge,action:'assessment'})}>Correct assessment</button></>}</div>
         <ul className="estate-history">{charge.payments.map(payment=><li key={payment.id}><span>{formatDate(payment.payment_date)} · {payment.receipt_reference} · {formatCurrency(payment.amount)} · {payment.source==='receipt'?'Receipt':'Security application'} · {payment.recorded_by_name}</span>
           {payment.source==='receipt' && <button className="btn-ghost" onClick={()=>setModal({type:'estateChargePayment',charge,data:payment})}>Correct receipt</button>}</li>)}</ul>
@@ -39,7 +44,7 @@ export function ChargeForm({term,kind,onSave,onClose}) {
   const [form,setForm]=useState({allotment:term.id,kind:kind||'incident_fine',description:'',net_amount:kind==='extension_fee'&&term.notice_governed?'1000':'',tax_amount:'',assessed_on:today(),due_date:today(),authority_reference:''});
   const set=key=>value=>setForm(old=>({...old,[key]:value}));
   return <form className="estate-form" aria-label="Charge assessment" onSubmit={event=>{event.preventDefault();if(event.currentTarget.reportValidity())onSave(form);}}>
-    <h2 id="modal-title">Assess {kind==='extension_fee'?'extension fee':'charge'} · {term.shop_code}</h2>
+    <h2 id="modal-title">Assess {kind==='extension_fee'?'extension fee':'charge'} · {term.register_label || term.tenant_name}</h2>
     <p className="payment-guidance">Record the approved amount and tax explicitly, including zero tax. These charges do not accrue automatic interest.</p>
     <div className="estate-form-grid">
       {!kind && <label>Charge type<select className="inp" value={form.kind} onChange={event=>set('kind')(event.target.value)}><option value="incident_fine">Incident fine</option><option value="damage_recovery">Damage recovery</option></select></label>}
@@ -57,7 +62,7 @@ export function ChargePaymentForm({charge,payment,onSave,onClose}) {
   const [form,setForm]=useState({charge:charge.id,amount:payment?.amount||'',payment_date:payment?.payment_date||today(),receipt_reference:payment?.receipt_reference||'',notes:payment?.notes||'',...(payment?{change_reason:''}:{})});
   const set=key=>value=>setForm(old=>({...old,[key]:value}));
   return <form className="estate-form" aria-label="Charge receipt" onSubmit={event=>{event.preventDefault();if(event.currentTarget.reportValidity())onSave(form);}}>
-    <h2 id="modal-title">{payment?'Correct':'Record'} charge receipt · {charge.shop_code}</h2><p>Balance {formatCurrency(charge.balance_due)} · {charge.authority_reference}</p>
+    <h2 id="modal-title">{payment?'Correct':'Record'} charge receipt · {charge.register_label}</h2><p>Balance {formatCurrency(charge.balance_due)} · {charge.authority_reference}</p>
     <div className="estate-form-grid">
       <Field id="charge-payment-amount" label="Amount received (₹)" type="number" min="0.01" step="0.01" value={form.amount} onChange={set('amount')} required />
       <Field id="charge-payment-date" label="Actual receipt date" type="date" min={charge.assessed_on} max={today()} value={form.payment_date} onChange={set('payment_date')} required />

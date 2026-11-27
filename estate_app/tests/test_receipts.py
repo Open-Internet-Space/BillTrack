@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.test import TestCase, TransactionTestCase
+from django.test import SimpleTestCase, TestCase, TransactionTestCase
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.utils import timezone
@@ -14,6 +14,26 @@ from rest_framework.test import APIClient
 from ..models import Bill, Payment, Tenant
 from ..views.bills import bill_read_queryset
 from ..views.invoices import consolidated_invoice_context
+
+
+class PaymentAdminAmountTests(SimpleTestCase):
+    def test_amount_received_distinguishes_penalty_only_receipts(self):
+        from django.contrib.admin import site
+        from ..admin.payments import PaymentAdmin
+
+        payment_admin = PaymentAdmin(Payment, site)
+        penalty_only = Payment(amount=Decimal('0'), penalty_paid=Decimal('1234.50'))
+        self.assertHTMLEqual(
+            payment_admin.amount_display(penalty_only),
+            '<strong style="color:#dc2626;">₹1,234.50 (Penalty)</strong>',
+        )
+        for amount, penalty, expected in [('0', '0', '0.00'), ('50', '10', '50.00')]:
+            with self.subTest(amount=amount, penalty=penalty):
+                payment = Payment(amount=Decimal(amount), penalty_paid=Decimal(penalty))
+                self.assertHTMLEqual(
+                    payment_admin.amount_display(payment),
+                    f'<strong style="color:green;">₹{expected}</strong>',
+                )
 
 
 class ReceiptBillingTests(TestCase):

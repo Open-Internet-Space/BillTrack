@@ -1,5 +1,7 @@
 .app-shell, .app-dialog { font: 14px/1.5 var(--font-body); }
 .app-sidebar { flex: 0 0 220px; }
+.sidebar-history { display: flex; gap: 6px; padding: 0 10px 8px; }
+.sidebar-history button { flex: 1; max-width: 100px; padding-inline: 8px; }
 .nav-link { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; margin-bottom: 4px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #a5adb8; font-size: 14px; line-height: 1.4; text-align: left; }
 .nav-link[aria-current] { background: #f0a50018; border-color: #f0a50055; color: var(--accent); font-weight: 600; }
 .nav-link:not([aria-current]):hover { background: var(--surface-hover); color: #e6edf3; }

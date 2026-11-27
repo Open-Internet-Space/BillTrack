@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.test import Client, TestCase, override_settings
 from rest_framework.authtoken.models import Token
 
-from ..models import Bill, Tenant
+from ..models import Bill, SystemSettings, Tenant
 
 
 class ProductionSettingsTests(TestCase):
@@ -107,3 +107,37 @@ class InvoiceAccessTests(TestCase):
         self.assertEqual(self.client.get(self.urls[0]+'?format=pdf', HTTP_AUTHORIZATION='Token '+self.token.key)['Content-Type'], 'application/pdf')
         User.objects.filter(pk=self.user.pk).update(is_active=False)
         self.assertEqual(self.client.get(self.urls[0], HTTP_AUTHORIZATION='Token '+self.token.key).status_code, 401)
+
+
+class CommunicationSwitchTests(TestCase):
+    @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+    def test_signup_and_email_switches_are_independent(self):
+        from django.core.exceptions import ValidationError
+        from ..reminders.service import send_reminders, send_test
+
+        config = SystemSettings.get_settings()
+        config.new_signups_enabled = False
+        config.bill_email_enabled = False
+        config.save()
+        with patch('estate_app.account_security.views.service.available', return_value=True):
+            response = self.client.post('/accounts/signup/', {
+                'name': 'Closed signup', 'email': 'closed@example.invalid', 'password': 'Temporary123!'
+            })
+            self.assertContains(response, 'New signups are currently closed')
+            self.assertFalse(User.objects.filter(email='closed@example.invalid').exists())
+            self.assertContains(self.client.get('/accounts/password-reset/'), 'Send email code')
+        self.assertNotContains(self.client.get('/admin/login/'), '>Create account</a>')
+
+        user = User.objects.create_superuser('communication-admin')
+        self.client.force_login(user)
+        self.assertContains(self.client.get('/admin/email-reminders/'), 'Bills email communication is disabled')
+        with self.assertRaisesMessage(ValidationError, 'Bills email communication is disabled'):
+            send_reminders(confirmed=[{}], user_id=user.pk)
+        with self.assertRaisesMessage(ValidationError, 'Bills email communication is disabled'):
+            send_test('test@example.invalid')
+        auth = {'HTTP_AUTHORIZATION': f'Token {Token.objects.create(user=user).key}'}
+        self.assertEqual(self.client.get('/api/email-templates/', **auth).status_code, 200)
+        config.bill_email_copy_enabled = False
+        config.save()
+        self.assertEqual(self.client.get('/api/email-templates/', **auth).status_code, 403)
+        self.assertEqual(self.client.post('/api/email-drafts/generate/', {}, **auth).status_code, 403)

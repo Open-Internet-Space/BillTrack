@@ -26,8 +26,23 @@ def charge_queryset():
     ).prefetch_related('payments__recorded_by')
 
 
+def may_delete_charge(user, charge):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser or user.pk == charge.created_by_id:
+        return True
+    try:
+        return user.profile.role == 'admin'
+    except UserProfile.DoesNotExist:
+        return False
+
+
+def charge_has_financial_history(charge):
+    return bool(charge.amount_paid or charge.renewal_term_id or charge.last_operation_id or charge.waiver_amount)
+
+
 class ChargePaymentSerializer(serializers.ModelSerializer):
-    shop_code=serializers.CharField(source='charge.allotment.shop.code',read_only=True)
+    register_label=serializers.CharField(source='charge.allotment.register_label',read_only=True)
     tenant_name=serializers.CharField(source='charge.allotment.tenant.name',read_only=True)
     recorded_by_name=serializers.SerializerMethodField()
 
@@ -50,7 +65,7 @@ class ChargePaymentSerializer(serializers.ModelSerializer):
 
 
 class EstateChargeSerializer(serializers.ModelSerializer):
-    shop_code=serializers.CharField(source='allotment.shop.code',read_only=True)
+    register_label=serializers.CharField(source='allotment.register_label',read_only=True)
     tenant_name=serializers.CharField(source='allotment.tenant.name',read_only=True)
     tenant=serializers.IntegerField(source='allotment.tenant_id',read_only=True)
     gross_amount=serializers.DecimalField(max_digits=12,decimal_places=2,read_only=True)
@@ -60,6 +75,11 @@ class EstateChargeSerializer(serializers.ModelSerializer):
     overdue=serializers.BooleanField(read_only=True)
     payments=ChargePaymentSerializer(many=True,read_only=True)
     created_by_name=serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+
+    def get_can_delete(self, obj):
+        request = self.context.get('request')
+        return bool(request and may_delete_charge(request.user, obj) and not charge_has_financial_history(obj))
 
     def get_created_by_name(self,obj):
         return (obj.created_by.get_full_name() or obj.created_by.username) if obj.created_by_id else ''
@@ -130,7 +150,6 @@ class EstateChargeViewSet(AuditedViewSetMixin,viewsets.ModelViewSet):
     queryset=EstateCharge.objects.all()
     serializer_class=EstateChargeSerializer
     permission_classes=[IsAuthenticated]
-    http_method_names=['get','post','put','patch','head','options']
     filter_backends=[DjangoFilterBackend,filters.SearchFilter,filters.OrderingFilter]
     filterset_fields=['allotment','allotment__shop','allotment__tenant','kind']
     search_fields=['allotment__shop__code','allotment__tenant__name','authority_reference','description']
@@ -141,7 +160,12 @@ class EstateChargeViewSet(AuditedViewSetMixin,viewsets.ModelViewSet):
         return charge_queryset()
 
     def get_deletion_plan(self):
-        raise ValidationError('Assessed obligations are retained. Use a reviewed waiver or assessment correction.')
+        charge = self.get_object()
+        if not may_delete_charge(self.request.user, charge):
+            raise PermissionDenied('Only the person who recorded this charge or an administrator may delete it.')
+        if charge_has_financial_history(charge):
+            raise ValidationError('Charges with receipts, reviewed decisions or linked renewals are retained. Use the reviewed correction workflow.')
+        return super().get_deletion_plan()
 
     @action(detail=True,methods=['post'],url_path='decision-preview')
     def decision_preview(self,request,pk=None):

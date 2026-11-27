@@ -10,7 +10,7 @@ from ..models import EstateCharge, EstateChargePayment
 class EstateChargeAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin):
     list_display=['allotment','kind','authority_reference','assessed_on','gross_amount','amount_paid',
                   'waiver_amount','balance_due','status','due_date']
-    list_filter=['kind','due_date','allotment__shop']
+    list_filter=['kind','due_date']
     search_fields=['allotment__shop__code','allotment__tenant__name','authority_reference','description']
     autocomplete_fields=['allotment']
     readonly_fields=['uuid','gross_amount','amount_paid','balance_due','status','overdue','renewal_term',
@@ -39,7 +39,7 @@ class EstateChargePaymentAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin
     search_fields=['charge__allotment__shop__code','charge__allotment__tenant__name','receipt_reference']
     autocomplete_fields=['charge']
     readonly_fields=['uuid','source','operation_id','recorded_by','created_at','updated_at']
-    list_select_related=['charge__allotment__shop','recorded_by']
+    list_select_related=['charge__allotment__tenant','recorded_by']
 
     def get_readonly_fields(self,request,obj=None):
         extra=['charge'] if obj else []

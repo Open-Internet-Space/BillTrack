@@ -10,7 +10,13 @@ test('staff can search for a guide and follow a related guide inside BillTrack',
     expect(button('Knowledge Base').getAttribute('aria-current')).toBe('page');
     const search = container.querySelector('#guide-search');
     const article = container.querySelector('#knowledge-guide');
-    expect(article.textContent).toContain('Record allotment for this shop');
+    expect(article.textContent).toContain('Record term');
+
+    act(() => fillInput(search, 'security deposits'));
+    await act(async () => button('Extensions and security deposits').click());
+    expect(article.textContent).toContain('₹8,600');
+    expect(article.textContent).toContain('Save with exception');
+    expect(article.querySelector('a[data-guide="ESTATE-WORKFLOW"]')).not.toBeNull();
 
     act(() => fillInput(search, 'windows tutorial'));
     expect(button('Windows installation tutorial')).toBeDefined();

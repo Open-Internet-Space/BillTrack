@@ -392,7 +392,7 @@ class NoticeBillTests(TestCase):
             rate=Decimal('10.5'),approval_reference='Approved April rate',reason='Reviewed annual increase')
         self.assertEqual(api.get('/api/estate/attention/?kind=revision_due').data['results'],[])
 
-    def test_mixed_policy_print_labels_each_month_without_a_false_shared_rule(self):
+    def test_mixed_policy_print_shows_monthly_deadlines_without_internal_labels(self):
         from estate_app.views import consolidated_invoice_context, selected_invoice_contexts
         from django.template.loader import render_to_string
         notice=self.bill()
@@ -401,8 +401,11 @@ class NoticeBillTests(TestCase):
         context=consolidated_invoice_context([notice,legacy])
         self.assertTrue(context['mixed_policies'])
         html=render_to_string('bulk_invoice.html',{'print_invoices':selected_invoice_contexts([notice,legacy])})
-        self.assertTrue('Mixed billing policies' in html)
-        self.assertTrue('Notices 368' in html and 'Legacy confirmed receipt' in html)
+        self.assertIn('Use the payment deadlines shown for each month.', html)
+        self.assertIn(notice.due_date.strftime('%d %b %Y'), html)
+        self.assertNotIn('Mixed billing policies', html)
+        self.assertNotIn('Notices 368', html)
+        self.assertNotIn('Legacy confirmed receipt', html)
 
     def test_batch_update_cannot_erase_confirmed_dispatch_evidence(self):
         bill=self.bill()

@@ -24,6 +24,8 @@ class PaymentAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.ModelAdmin)
     date_hierarchy = 'payment_date'
 
     def amount_display(self, obj):
+        if obj.amount == 0 and obj.penalty_paid > 0:
+            return format_html('<strong style="color:#dc2626;">₹{} (Penalty)</strong>', money(obj.penalty_paid))
         return format_html(
             '<strong style="color:green;">₹{}</strong>',
             money(obj.amount)

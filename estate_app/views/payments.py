@@ -1,3 +1,4 @@
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -12,6 +13,8 @@ class PaymentViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     queryset = Payment.objects.select_related('bill__tenant', 'bill__allotment__shop', 'recorded_by')
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['bill']
 
     def destroy(self, request, *args, **kwargs):
         if self.get_object().source != 'receipt':

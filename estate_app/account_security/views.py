@@ -10,6 +10,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
+from ..models import SystemSettings
 from ..models import AccountAccess
 from . import service
 from .forms import CodeForm, EmailForm, ExistingEmailForm, ResetForm, SignupForm
@@ -53,6 +54,9 @@ def account_page(request, purpose):
     if request.method == 'GET' and request.GET.get('restart') == '1':
         request.session.pop(session_key, None)
     verifying = request.POST.get('action') == 'verify' if request.method == 'POST' else bool(request.session.get(session_key))
+    new_signups = SystemSettings.feature_enabled('new_signups_enabled')
+    signup_closed = purpose == 'signup' and not new_signups and not (verifying and request.session.get(session_key))
+    enabled = enabled and not signup_closed
     form_class = (ResetForm if purpose == 'recovery' else CodeForm) if verifying else FORMS[purpose]
     form = form_class(request.POST if request.method == 'POST' and enabled else None)
     error = ''
@@ -87,12 +91,11 @@ def account_page(request, purpose):
             error = ' '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc)
         except IntegrityError:
             error = 'These account details cannot be used. Contact a superuser if you already have an account.'
-    response = render(request, 'accounts/page.html', {
+    return render(request, 'accounts/page.html', {
         'title': TITLES[purpose], 'purpose': purpose, 'available': enabled,
+        'signup_closed': signup_closed, 'new_signups': new_signups,
         'form': form, 'verifying': verifying, 'error': error, 'notice': notice, 'done': done,
     })
-    response['Referrer-Policy'] = 'no-referrer'
-    return response
 
 
 @require_http_methods(['GET', 'POST'])

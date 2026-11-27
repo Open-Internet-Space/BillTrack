@@ -139,9 +139,7 @@ def authenticator_setup(request):
             request.session.pop('authenticator_setup', None)
             pending = None
     from .qr import qr_data_uri
-    response = render(request, 'accounts/authenticator_setup.html', {
+    return render(request, 'accounts/authenticator_setup.html', {
         'form': form, 'secret': pending['secret'] if pending else '', 'error': error, 'notice': notice,
         'qr_image': qr_data_uri(pending['secret'], pending.get('label', 'Personal account')) if pending else '',
     })
-    response['Referrer-Policy'] = 'no-referrer'
-    return response

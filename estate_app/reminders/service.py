@@ -14,6 +14,7 @@ from django.db.models import F, Q
 from django.db import transaction
 from django.utils import timezone
 from ..models import Bill
+from ..models import SystemSettings
 from ..models.reminders import ReminderSettings, ReminderDelivery, ReminderSubmission
 from ..views.bills import bill_read_queryset
 from .delivery import send_message, PartialRecipientAcceptance
@@ -105,7 +106,7 @@ def preview(today=None,ignore_log_pk=None):
         group=groups.setdefault(str(tenant.uuid),{'uuid':str(tenant.uuid),'allottee':tenant,'email':email,'items':[],'total':Decimal('0')})
         group['items'].append({'key':key,'bill_id':bill.pk,'reference':bill.dispatch_ref_no or bill.invoice_no,
             'period':f'{bill.get_month_name()} {bill.year}','receipt_date':str(confirmed),'due_date':str(bill.due_date),
-            'shop':bill.allotment.shop.code if bill.allotment_id else '', 'award':bill.allotment.award_reference if bill.allotment_id else '',
+            'award':bill.allotment.award_reference if bill.allotment_id else '',
             'policy':bill.billing_policy,
             'offset':offset,'scheduled_date':str(scheduled),'principal':f'{principal:.2f}','penalty':f'{penalty:.2f}',
             'total':f'{principal+penalty:.2f}'})
@@ -122,6 +123,8 @@ def safe_error(error):
     return 'Mail connection or submission failed. Check SMTP settings and network access; private server details were not logged.'
 
 def send_test(address):
+    if not SystemSettings.feature_enabled('bill_email_enabled'):
+        raise ValidationError('Bills email communication is disabled in System Settings.')
     from .composition import validate_sender
     validate_sender()
     validate_email(address)
@@ -145,6 +148,8 @@ def send_reminders(today=None,selected=None,automatic=False,confirmed=None,user_
     if automatic or confirmed is None:
         result['error']='Reminder emails require a preview and confirmation in Admin; automatic and direct sending are disabled.'
         return result
+    if not SystemSettings.feature_enabled('bill_email_enabled'):
+        raise ValidationError('Bills email communication is disabled in System Settings.')
     from .composition import confirmed_messages, group_fingerprint
     approved=confirmed_messages(confirmed,user_id,today)
     groups,_=preview(today)
@@ -182,6 +187,12 @@ def send_reminders(today=None,selected=None,automatic=False,confirmed=None,user_
                 content=approved[group['uuid']]
                 cc=[address.strip() for address in content['cc'].replace(';',',').split(',') if address.strip()]
                 message=EmailMessage(content['subject'],content['body'],settings.DEFAULT_FROM_EMAIL,[log.recipient],cc=cc,connection=connection)
+                if not SystemSettings.feature_enabled('bill_email_enabled'):
+                    log.status = 'skipped'
+                    log.error = 'Bills email communication was turned off.'
+                    save_submission(log)
+                    result['skipped'] += 1
+                    break
                 log.status='sending';save_submission(log)
                 try:
                     count=send_message(message,connection)

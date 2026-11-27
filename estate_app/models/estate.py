@@ -32,8 +32,8 @@ class Shop(models.Model):
         r'\A[A-Z0-9][A-Z0-9._/-]*\Z', 'Use letters, digits, dots, slashes or hyphens for a shop code.')])
     name = models.CharField(max_length=200)
     location = models.CharField(max_length=250, blank=True)
-    category = models.CharField(max_length=20, choices=[('day_food', 'Day food shop'),
-        ('utility', 'Utility shop'), ('night_utility', 'Night utility shop')])
+    category = models.CharField(max_length=20, choices=[('day_food', 'Daytime food service'),
+        ('utility', 'Utility or other service'), ('night_utility', 'Night-time utility service')])
     space_type = models.CharField(max_length=20, choices=[('space', 'Space'), ('room', 'Constructed room')], default='space')
     advertised_area = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True,
                                            validators=[MinValueValidator(Decimal('0.0001'))])
@@ -48,6 +48,8 @@ class Shop(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        verbose_name = 'premises'
+        verbose_name_plural = 'premises'
         ordering = ['code']
         constraints = [models.UniqueConstraint(Lower('code'), name='estate_shop_code_unique')]
 
@@ -58,7 +60,7 @@ class Shop(models.Model):
         if self.pk and type(self).objects.filter(pk=self.pk).exclude(code=self.code).exists():
             if self.allotments.filter(models.Q(bills__isnull=False) | models.Q(charges__isnull=False)
                                       | models.Q(security_movements__isnull=False)).exists():
-                raise ValidationError({'code': 'A shop code with financial history is protected. Correct its descriptive fields instead.'})
+                raise ValidationError({'code': 'A premises code with financial history is protected. Correct its descriptive fields instead.'})
         if bool(self.availability_confirmed_on) != bool(self.availability_reference.strip()):
             raise ValidationError({'availability_reference': 'Record both the availability date and its reference.'})
         if self.availability_confirmed_on and self.availability_confirmed_on > timezone.localdate():
@@ -85,21 +87,24 @@ class Shop(models.Model):
 
 class Allotment(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
-    shop = models.ForeignKey(Shop, on_delete=models.PROTECT, related_name='allotments')
+    shop = models.ForeignKey(Shop, on_delete=models.PROTECT, related_name='allotments', null=True, blank=True, verbose_name='Legacy inventory reference')
     tenant = models.ForeignKey('Tenant', on_delete=models.PROTECT, related_name='allotments', verbose_name='Allottee')
-    source_notice = models.CharField(max_length=100)
+    source_notice = models.CharField(max_length=100, blank=True)
     award_reference = models.CharField(max_length=250)
     letter_issued_on = models.DateField()
     start_date = models.DateField()
     end_date = models.DateField()
-    actual_area = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal('0.0001'))])
-    measurement_reference = models.CharField(max_length=250)
+    rent_basis = models.CharField(max_length=10, choices=[('area', 'Area × accepted rate'), ('flat', 'Flat monthly charge')], default='area')
+    actual_area = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True, validators=[MinValueValidator(Decimal('0.0001'))])
+    measurement_reference = models.CharField(max_length=250, blank=True)
     approved_rate_reference = models.CharField(max_length=250, blank=True)
     exception_reference = models.CharField(max_length=250, blank=True)
+    exception_reason = models.TextField(blank=True, max_length=2000)
     notes = models.TextField(blank=True)
     termination_date = models.DateField(null=True, blank=True)
     termination_reference = models.CharField(max_length=250, blank=True)
     renewal_of = models.OneToOneField('self', on_delete=models.PROTECT, related_name='renewal', null=True, blank=True)
+    carry_forward_deposit = models.BooleanField('Carry forward existing security deposit', default=False)
     performance_reference = models.CharField(max_length=250, blank=True)
     approval_reference = models.CharField(max_length=250, blank=True)
     possession_date = models.DateField(null=True, blank=True)
@@ -110,6 +115,9 @@ class Allotment(models.Model):
     vacation_reference = models.CharField(max_length=250, blank=True)
     security_initial_rent = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     security_required_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    security_timing = models.CharField(max_length=6, blank=True, default='', choices=[
+        ('before', 'Before allotment order'), ('after', 'After allotment order')])
+    security_offer_date = models.DateField(null=True, blank=True)
     security_due_date = models.DateField(null=True, blank=True, editable=False)
     security_requirement_reference = models.CharField(max_length=250, blank=True)
     security_requirement_reason = models.TextField(blank=True)
@@ -127,13 +135,26 @@ class Allotment(models.Model):
         ordering = ['shop__code', '-start_date', '-pk']
         constraints = [
             models.CheckConstraint(check=models.Q(end_date__gte=models.F('start_date')), name='estate_term_date_order'),
-            models.CheckConstraint(check=models.Q(actual_area__gt=0), name='estate_term_positive_area'),
+            models.CheckConstraint(check=(models.Q(rent_basis='area', actual_area__isnull=False, actual_area__gt=0)
+                                          | models.Q(rent_basis='flat', actual_area__isnull=True)),
+                                   name='estate_term_rent_basis_area'),
             models.UniqueConstraint(fields=['shop', 'award_reference'], condition=models.Q(renewal_of__isnull=True),
                                     name='estate_original_award_reference'),
+            models.UniqueConstraint(fields=['tenant', 'award_reference'],
+                                    condition=models.Q(renewal_of__isnull=True, shop__isnull=True),
+                                    name='estate_register_award_reference'),
         ]
 
+    @property
+    def register_label(self):
+        return self.tenant.display_name
+
+    @property
+    def record_scope(self):
+        return ('legacy inventory', self.shop_id) if self.shop_id else ('register', self.tenant_id)
+
     def __str__(self):
-        return f'{self.shop.code} — {self.tenant.name} ({self.start_date} to {self.end_date})'
+        return f'{self.register_label} ({self.start_date} to {self.end_date})'
 
     def _lineage(self):
         current, seen, chain = self, set(), []
@@ -215,16 +236,30 @@ class Allotment(models.Model):
     def status(self):
         return self.status_on(timezone.localdate())
 
+    def validate_rent_basis(self):
+        if self.rent_basis == 'flat':
+            if self.actual_area is not None:
+                raise ValidationError({'actual_area': 'Clear allotted area for a flat charge.'})
+        elif self.actual_area is None:
+            raise ValidationError({'actual_area': 'Record the allotted area.'})
+        elif self.notice_governed and not self.measurement_reference.strip():
+            raise ValidationError({'measurement_reference': 'Record the measurement reference for this notice-based allotment.'})
+
     def clean(self):
-        if not all([self.shop_id, self.tenant_id, self.start_date, self.end_date, self.letter_issued_on]):
+        self.validate_rent_basis()
+        if not all([self.tenant_id, self.start_date, self.end_date, self.letter_issued_on]):
             return
-        shop = Shop.objects.filter(pk=self.shop_id).first()
-        if shop is None:
+        if self._state.adding and self.renewal_of_id and not self.shop_id:
+            self.shop_id = self.renewal_of.shop_id
+        shop = Shop.objects.filter(pk=self.shop_id).first() if self.shop_id else None
+        if self.shop_id and shop is None:
             return  # Foreign-key field validation supplies the missing reference error.
         if self.end_date < self.start_date:
             raise ValidationError({'end_date': 'End date must be on or after the start date.'})
         if self.start_date < self.letter_issued_on and not self.exception_reference.strip():
             raise ValidationError({'exception_reference': 'An earlier start requires the approved exception reference.'})
+        if self.exception_reason.strip() and not self.exception_reference.strip():
+            raise ValidationError({'exception_reference': 'Record the approval reference for the date exception reason.'})
         if self.termination_date and not self.start_date <= self.termination_date <= self.end_date:
             raise ValidationError({'termination_date': 'Termination must be within the contractual term.'})
         for field, reference in [('termination_date', 'termination_reference'), ('possession_date', 'possession_reference'),
@@ -239,14 +274,21 @@ class Allotment(models.Model):
             if origin is None or not max(self.start_date, origin.possession_date) <= self.handover_date <= timezone.localdate():
                 raise ValidationError({'handover_date': 'Handover requires recorded or continued possession in this term and cannot be in the future.'})
         existing = type(self).objects.filter(pk=self.pk).first() if self.pk else None
+        if self.carry_forward_deposit and not self.renewal_of_id:
+            raise ValidationError({'carry_forward_deposit': 'Deposit carry-forward is available only on a renewal.'})
+        if existing and existing.rent_basis != self.rent_basis and (
+                existing.rent_revisions.exists() or existing.bills.exists()
+                or existing.renewal_of_id or type(self).objects.filter(renewal_of_id=existing.pk).exists()):
+            raise ValidationError({'rent_basis': 'The charge basis is fixed once a rate, bill or renewal is recorded.'})
         from ..estate.security import validate_security_requirement
         validate_security_requirement(self, existing)
         if existing and self.security_movements.exists() and (existing.shop_id, existing.tenant_id) != (self.shop_id, self.tenant_id):
-            raise ValidationError('An award with security history cannot be moved to another shop or allottee.')
-        if existing and self.security_movements.filter(effective_date__lt=self.letter_issued_on).exists():
-            raise ValidationError('The original letter cannot follow an existing security receipt or movement.')
+            raise ValidationError('An award with security history cannot be moved to a different allotment register entry.')
+        if existing and self.security_movements.exclude(kind='received').filter(effective_date__lt=self.letter_issued_on).exists():
+            raise ValidationError('The original letter cannot follow an existing security debit.')
         if existing and existing.renewal_of_id != self.renewal_of_id:
-            raise ValidationError({'renewal_of': 'Recorded renewal lineage cannot be changed; retain the original award and fee history.'})
+            if existing.renewal_of_id or not getattr(self, '_link_existing_extension', False):
+                raise ValidationError({'renewal_of': 'Use the reviewed action to link an existing extension. A recorded link cannot be changed here.'})
         descendants = []
         if existing:
             descendant = type(self).objects.filter(renewal_of_id=existing.pk).first()
@@ -254,31 +296,43 @@ class Allotment(models.Model):
                 descendants.append(descendant)
                 descendant = type(self).objects.filter(renewal_of_id=descendant.pk).first()
         if existing and descendants and (existing.shop_id, existing.tenant_id) != (self.shop_id, self.tenant_id):
-            raise ValidationError('An award with recorded extensions cannot be moved to another shop or allottee.')
+            raise ValidationError('An award with recorded extensions cannot be moved to a different allotment register entry.')
         if existing and not existing.renewal_of_id and self.source_notice != existing.source_notice:
             has_notice_bill = any(term.bills.filter(billing_policy='notices_368_369').exists()
                                   for term in [existing, *descendants])
             if descendants or has_notice_bill:
                 raise ValidationError({'source_notice': 'The original notice is retained once extensions or notice invoices exist.'})
+            if self.notice_governed:
+                latest_rate = existing.rent_revisions.order_by('-effective_date').first()
+                if latest_rate:
+                    latest_rate.original_award = self
+                    try:
+                        latest_rate.clean()
+                    except ValidationError as error:
+                        raise ValidationError({'source_notice': 'Review the rent schedule against the notice. ' + ' '.join(error.messages)}) from error
         if existing and self.charges.exists() and (existing.shop_id,existing.tenant_id) != (self.shop_id,self.tenant_id):
-            raise ValidationError('An allotment with assessed charges cannot be moved to another shop or allottee.')
+            raise ValidationError('An allotment with assessed charges cannot be moved to a different allotment register entry.')
         if existing and self.bills.exists():
             if existing.shop_id != self.shop_id or existing.tenant_id != self.tenant_id:
-                raise ValidationError('A billed allotment cannot be moved to another shop or allottee.')
+                raise ValidationError('A billed allotment cannot be moved to a different allotment register entry.')
             for bill in self.bills.all():
                 first = dt.date(bill.year, bill.month, 1)
                 last = first.replace(day=calendar.monthrange(bill.year, bill.month)[1])
                 if self.start_date > last or self.effective_end < first:
                     raise ValidationError('The edited term would exclude an existing bill period.')
-        if not shop.active and (existing is None or existing.shop_id != self.shop_id) and self.effective_end >= timezone.localdate():
-            raise ValidationError({'shop': 'A retired shop cannot receive a current or future allotment.'})
+        if shop and not shop.active and (existing is None or existing.shop_id != self.shop_id) and self.effective_end >= timezone.localdate():
+            raise ValidationError({'shop': 'Retired premises cannot receive a current or future allotment.'})
         if self.renewal_of_id:
             chain = self._lineage()
             previous = chain[1]
+            if self.carry_forward_deposit and not (existing and existing.carry_forward_deposit) and chain[-1].security_held <= 0:
+                raise ValidationError({'carry_forward_deposit': 'Record the actual deposit receipt under the original award before carrying forward a held balance.'})
+            if self.rent_basis != previous.rent_basis:
+                raise ValidationError({'rent_basis': 'A renewal retains the original charge basis.'})
             if len(chain) > 3:
                 raise ValidationError({'renewal_of': 'Only two yearly extensions are permitted under the original award.'})
             if previous.shop_id != self.shop_id or previous.tenant_id != self.tenant_id:
-                raise ValidationError({'renewal_of': 'A renewal must retain the shop and allottee.'})
+                raise ValidationError({'renewal_of': 'A renewal must retain its allotment register entry.'})
             if self.start_date <= previous.effective_end:
                 raise ValidationError({'start_date': 'A renewal must start after its preceding term ends.'})
             if not self.performance_reference.strip() or not self.approval_reference.strip():
@@ -293,15 +347,17 @@ class Allotment(models.Model):
                 raise ValidationError({'end_date': 'A yearly extension cannot exceed one year without an approved exception.'})
         elif self.end_date > yearly_end(self.letter_issued_on) and not self.exception_reference.strip():
             raise ValidationError({'end_date': 'An initial award exceeding one year requires an approved exception.'})
-        peers = type(self).objects.filter(shop_id=self.shop_id).exclude(pk=self.pk)
-        if self.possession_date and not (existing and existing.possession_date):
+        peers = type(self).objects.exclude(pk=self.pk)
+        peers = (peers.filter(shop_id=self.shop_id) if shop
+                 else peers.filter(shop__isnull=True, tenant_id=self.tenant_id))
+        if shop and self.possession_date and not (existing and existing.possession_date):
             initially_available = shop.availability_confirmed_on and shop.availability_confirmed_on <= self.possession_date
             handed_over = peers.filter(handover_date__lt=self.possession_date).exists()
             if not initially_available and not handed_over:
                 raise ValidationError({'possession_date': 'Confirm initial availability or the previous handover before possession.'})
         for peer in peers:
             if peer.start_date <= self.effective_end and peer.effective_end >= self.start_date:
-                raise ValidationError({'start_date': 'This shop already has an overlapping allotment.'})
+                raise ValidationError({'start_date': 'This register entry already has an overlapping allotment term.'})
         terms = [*peers, self]
         by_id = {term.pk: term for term in terms if term.pk}
         for term in terms:
@@ -318,8 +374,12 @@ class Allotment(models.Model):
         using = kwargs.get('using') or router.db_for_write(type(self), instance=self)
         created = self._state.adding
         with transaction.atomic(using=using):
-            # Acquire the SQLite write reservation before overlap reads, including an empty shop.
-            Shop.objects.using(using).filter(pk=self.shop_id).update(active=models.F('active'))
+            # Reserve the SQLite writer before validating overlapping terms.
+            if self.shop_id:
+                Shop.objects.using(using).filter(pk=self.shop_id).update(active=models.F('active'))
+            else:
+                from .allottees import Tenant
+                Tenant.objects.using(using).filter(pk=self.tenant_id).update(active=models.F('active'))
             self.full_clean()
             result = super().save(*args, **kwargs)
             if created and not self.renewal_of_id and self.source_notice in (
@@ -336,7 +396,7 @@ class Allotment(models.Model):
         for kind, due, applicable, reason in [
             ('police', self.letter_issued_on + dt.timedelta(days=30), True, ''),
             ('gst', self.letter_issued_on + dt.timedelta(days=90), not bool(self.tenant.gstin), 'GST already recorded'),
-            ('food', None, self.shop.category in ('day_food', 'night_utility'), 'Non-food utility activity'),
+            ('food', None, not self.shop_id or self.shop.category in ('day_food', 'night_utility'), 'Non-food utility activity'),
         ]:
             self.requirements.get_or_create(kind=kind, defaults={'due_date': due, 'applicable': applicable,
                 'not_applicable_reason': '' if applicable else reason})

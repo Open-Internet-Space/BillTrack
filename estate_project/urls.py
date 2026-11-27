@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.views.generic import TemplateView
+from django.views.decorators.cache import never_cache
+from estate_app.models import SystemSettings
 from estate_app.views import totp_password_reset
 from estate_app.data_transfer import transfer_view, export_view, backup_view
 
@@ -9,6 +11,14 @@ from estate_app.maintenance import rollback_view, modification_view
 from estate_app.account_security.views import account_page, approvals
 from estate_app.account_security.totp import authenticator_setup
 from estate_app.account_security.emergency import emergency_authenticator
+
+class FrontendView(TemplateView):
+    template_name = 'index.html'
+
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs),
+                'new_signups': SystemSettings.feature_enabled('new_signups_enabled')}
+
 
 urlpatterns = [
     path('admin/emergency-authenticator/', admin.site.admin_view(emergency_authenticator), name='admin-emergency-authenticator'),
@@ -28,7 +38,7 @@ urlpatterns = [
     path('api/', include('estate_app.urls')),
 
     # React frontend
-    re_path(r'^$', TemplateView.as_view(template_name='index.html')),
+    re_path(r'^$', never_cache(FrontendView.as_view())),
 ]
 
 handler400 = 'estate_app.error_handling.bad_request'

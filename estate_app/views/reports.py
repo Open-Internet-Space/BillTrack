@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from weasyprint import HTML
 
-from ..models import Allotment, Bill, EstateCharge, Payment, SecurityMovement, Shop, SystemSettings, Tenant
+from ..models import Allotment, Bill, EstateCharge, Payment, SecurityMovement, SystemSettings, Tenant
 from .report_exports import document_bytes, workbook_bytes
 
 
@@ -32,18 +32,18 @@ LABELS = {
     'penalty_due': 'Penalty due', 'total_due': 'Total due', 'received': 'Cash received',
     'opening': 'Opening net dues', 'penalty_movement': 'Penalty accrued in period', 'closing': 'Closing net dues',
     'security_applied': 'Security applied (noncash)',
-    'shop':'Shop', 'award':'Allotment', 'policy':'Billing policy', 'entry':'Entry / reference',
+    'award':'Allotment', 'policy':'Billing policy', 'entry':'Entry / reference',
     'holiday_waiver':'Holiday rent waived', 'charge_due':'One-off charge due',
     'charge_waived':'Charge waived', 'security_held':'Security liability movement',
 }
 MONEY_FIELDS = set('rent gst electric water billed paid balance penalty_accrued penalty_paid penalty_due total_due received opening penalty_movement closing security_applied'.split())
 SCHEMAS = {
-    'payments': 'payment_date vendor shop award policy receipt dispatch_ref_no bill_date period paid penalty_paid received',
-    'pending': 'vendor shop award policy dispatch_ref_no bill_date period receipt_status due_date status billed paid balance penalty_due total_due',
-    'penalties': 'vendor shop award policy dispatch_ref_no bill_date period due_date days_overdue penalty_accrued penalty_paid penalty_due',
-    'bills': 'vendor shop award policy dispatch_ref_no bill_date period receipt_status status rent gst electric water billed paid balance',
-    'statement': 'vendor shop award opening billed penalty_movement paid penalty_paid received security_applied closing',
-    'estate': 'vendor shop award entry holiday_waiver balance penalty_due charge_due charge_waived received security_applied total_due security_held',
+    'payments': 'payment_date vendor award policy receipt dispatch_ref_no bill_date period paid penalty_paid received',
+    'pending': 'vendor award policy dispatch_ref_no bill_date period receipt_status due_date status billed paid balance penalty_due total_due',
+    'penalties': 'vendor award policy dispatch_ref_no bill_date period due_date days_overdue penalty_accrued penalty_paid penalty_due',
+    'bills': 'vendor award policy dispatch_ref_no bill_date period receipt_status status rent gst electric water billed paid balance',
+    'statement': 'vendor award opening billed penalty_movement paid penalty_paid received security_applied closing',
+    'estate': 'vendor award entry holiday_waiver balance penalty_due charge_due charge_waived received security_applied total_due security_held',
 }
 MONEY_FIELDS.update(('holiday_waiver','charge_due','charge_waived','security_held'))
 HISTORY_NOTE = ('Historical reports reconstruct payment timing using current bill, vendor and penalty settings. '
@@ -56,7 +56,6 @@ class ReportFilters(serializers.Serializer):
     start = serializers.DateField(required=False)
     to = serializers.DateField(default=timezone.localdate)
     tenant = serializers.PrimaryKeyRelatedField(queryset=Tenant.objects.all(), required=False)
-    shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all(), required=False)
     allotment = serializers.PrimaryKeyRelatedField(queryset=Allotment.objects.all(), required=False)
     policy = serializers.ChoiceField(choices=['legacy_receipt','notices_368_369'], required=False)
     type = serializers.ChoiceField(choices=['', 'Shop', 'Canteen', 'Contractor'], default='')
@@ -78,7 +77,7 @@ class ReportFilters(serializers.Serializer):
         if attrs.get('billing_from', '') > attrs.get('billing_to', '9999-12'):
             raise serializers.ValidationError('Billing month range is reversed.')
         if attrs['report']=='estate' and any(attrs.get(key) for key in ('start','status','receipt_status','billing_from','billing_to','policy')):
-            raise serializers.ValidationError('The estate statement uses the cutoff, allottee, vendor type, shop and allotment filters.')
+            raise serializers.ValidationError('The estate statement uses the cutoff, allottee, vendor type and allotment filters.')
         return attrs
 
 
@@ -115,13 +114,15 @@ def bill_position(bill, cutoff):
 def estate_position_rows(filters, bills, settings):
     end = filters['to']
     terms = Allotment.objects.all()
-    for key, field in [('shop','shop'),('allotment','pk'),('tenant','tenant'),('type','tenant__type')]:
+    if filters.get('allotment'):
+        terms = terms.filter(pk=filters['allotment'].pk)
+    for key, field in [('tenant','tenant'),('type','tenant__type')]:
         if filters.get(key):
             terms = terms.filter(**{field:filters[key]})
     rows = []
     def add(person, term, entry, **amounts):
-        rows.append({'vendor':person.name, 'shop':term.shop.code if term else 'Unassigned',
-                     'award':term.award_reference if term else '—', 'entry':entry, **amounts})
+        rows.append({'vendor':person.display_name,
+                     'award':term.award_reference if term else 'Unassigned', 'entry':entry, **amounts})
     for bill in bills.order_by('tenant__name','year','month','pk'):
         if bill.is_draft or (bill.raised_date and bill.raised_date>end):
             continue
@@ -132,7 +133,7 @@ def estate_position_rows(filters, bills, settings):
             balance=position['balance'], penalty_due=position['penalty_due'], total_due=position['total_due'],
             received=position['cash_received'],security_applied=position['security_applied'])
     for charge in EstateCharge.objects.filter(allotment__in=terms, assessed_on__lte=end).select_related(
-            'allotment__shop','allotment__tenant').prefetch_related('payments').order_by('assessed_on','pk'):
+            'allotment__tenant').prefetch_related('payments').order_by('assessed_on','pk'):
         receipts = [p for p in charge.payments.all() if p.payment_date<=end]
         paid = sum((p.amount for p in receipts if p.source=='receipt'), ZERO)
         applied = sum((p.amount for p in receipts if p.source=='security_application'), ZERO)
@@ -144,7 +145,7 @@ def estate_position_rows(filters, bills, settings):
     if filters.get('allotment'):
         roots = Allotment.objects.filter(pk=filters['allotment'].original_award.pk) if terms.exists() else terms
     for movement in SecurityMovement.objects.filter(original_award__in=roots,effective_date__lte=end).select_related(
-            'original_award__shop','original_award__tenant').order_by('effective_date','pk'):
+            'original_award__tenant').order_by('effective_date','pk'):
         add(movement.original_award.tenant,movement.original_award,
             f'{movement.effective_date} · Security {movement.get_kind_display()} · {movement.reference}',
             security_held=movement.amount if movement.kind=='received' else -movement.amount)
@@ -157,14 +158,14 @@ def build_report(filters):
     if kind == 'statement' and not start:
         start = end.replace(day=1)
     settings = SystemSettings.get_settings()
-    bills = Bill.objects.select_related('tenant','allotment__shop').filter(
+    bills = Bill.objects.select_related('tenant','allotment').filter(
         Q(year__lt=end.year) | Q(year=end.year, month__lte=end.month) | Q(payments__payment_date__lte=end)
     ).distinct().prefetch_related(Prefetch('payments', queryset=Payment.objects.filter(payment_date__lte=end).order_by('payment_date', 'pk')))
     if filters.get('tenant'):
         bills = bills.filter(tenant=filters['tenant'])
     if filters['type']:
         bills = bills.filter(tenant__type=filters['type'])
-    for key,field in [('shop','allotment__shop'),('allotment','allotment'),('policy','billing_policy')]:
+    for key,field in [('allotment','allotment'),('policy','billing_policy')]:
         if filters.get(key):
             bills = bills.filter(**{field:filters[key]})
     if 'billing_from' in filters:
@@ -185,8 +186,8 @@ def build_report(filters):
             continue
         if filters['receipt_status'] and confirmed != (filters['receipt_status'] == 'confirmed'):
             continue
-        identity = {'vendor': bill.tenant.name, 'shop': bill.allotment.shop.code if bill.allotment_id else 'Unassigned',
-                    'award': bill.allotment.award_reference if bill.allotment_id else ''}
+        identity = {'vendor': bill.tenant.display_name,
+                    'award': bill.allotment.award_reference if bill.allotment_id else 'Unassigned'}
         common = {**identity, 'policy': bill.get_billing_policy_display(), 'dispatch_ref_no': bill.dispatch_ref_no,
                   'bill_date': (bill.raised_date.isoformat() if bill.raised_date and bill.raised_date <= end else '')
                     if bill.billing_policy == 'notices_368_369' else bill.issue_date.isoformat() if confirmed else '',
@@ -205,7 +206,7 @@ def build_report(filters):
         elif kind == 'statement':
             opening = bill_position(bill, start - dt.timedelta(days=1))
             row = statements.setdefault((bill.tenant_id, bill.allotment_id),
-                {**identity, **dict.fromkeys(SCHEMAS['statement'].split()[3:], ZERO)})
+                {**identity, **dict.fromkeys(SCHEMAS['statement'].split()[2:], ZERO)})
             row['opening'] += opening['net']
             row['billed'] += position['billed'] - opening['billed']
             row['penalty_movement'] += position['penalty_accrued'] - opening['penalty_accrued']
@@ -240,7 +241,7 @@ def build_report(filters):
     descriptions = [f'Cutoff: {end.isoformat()}']
     if kind in ('payments', 'bills', 'statement'):
         descriptions.append(f'{"Billing months" if kind == "bills" else "Period"}: {start.isoformat() if start else "All history"} to {end.isoformat()}')
-    for key, label in [('tenant', 'Vendor'), ('shop','Shop'),('allotment','Award'),('policy','Policy'),('type', 'Vendor type'), ('status', 'Status'),
+    for key, label in [('tenant', 'Vendor'), ('allotment','Award'),('policy','Policy'),('type', 'Vendor type'), ('status', 'Status'),
                        ('receipt_status', 'Receipt'), ('billing_from', 'Billing from'), ('billing_to', 'Billing to')]:
         if filters.get(key):
             value = filters[key].name if key == 'tenant' else filters[key]

@@ -244,16 +244,18 @@ class EstateMigrationTests(ActivityTransactionTestCase):
         from django.db.migrations.executor import MigrationExecutor
 
         tenant = Tenant.objects.create(name='Retained migration record', type='Shop')
-        latest = MigrationExecutor(connection).loader.graph.leaf_nodes('estate_app')
+        executor = MigrationExecutor(connection)
+        latest = executor.loader.graph.leaf_nodes('estate_app')
+        target = [('estate_app', '0005_protected_submissions')]
         try:
-            MigrationExecutor(connection).migrate([('estate_app', '0005_protected_submissions')])
+            executor.migrate(target)
+            historical = executor.loader.project_state(target).apps
             with connection.cursor() as cursor:
                 cursor.execute("SELECT name FROM sqlite_master WHERE type='trigger'")
                 triggers = {row[0] for row in cursor.fetchall()}
             self.assertIn('bt_activity_no_delete', triggers)
             self.assertIn('bt_audit_estate_app_tenant_update', triggers)
-            tenant.contact = 'Synthetic contact'
-            tenant.save()
+            historical.get_model('estate_app', 'Tenant').objects.filter(pk=tenant.pk).update(contact='Synthetic contact')
             self.assertTrue(ActivityEntry.objects.filter(record_type='estate_app.tenant',
                 record_id=str(tenant.pk), action='update').exists())
         finally:

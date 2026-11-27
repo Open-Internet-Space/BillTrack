@@ -2,7 +2,7 @@ import Pagination from "../../Pagination";
 
 export function BillFilters({ filters, billRows, setFilters, changeFilter, types, tenantOptions, yearOptions, monthOptions, pagination }) {
   return (<div className="card" style={{ padding: "12px 14px", marginBottom: 14 }}>
-        {filters.allotment && <div className="bill-context"><span>Bills for {filters.shopCode || 'selected shop'} · allotment term {filters.allotment}</span><button className="btn-ghost" onClick={() => setFilters(previous => ({ ...previous, allotment: null, shopCode: '' }))}>Show all allottee bills</button></div>}
+        {filters.allotment && <div className="bill-context"><span>Bills for {filters.registerLabel || 'selected allotment'} · allotment term {filters.allotment}</span><button className="btn-ghost" onClick={() => setFilters(previous => ({ ...previous, allotment: null, registerLabel: '' }))}>Show all allottee bills</button></div>}
         {filters.billId && <div className="bill-context"><span>Opened from Dashboard: {billRows.find(b => b.id === filters.billId)?.invoice_no || "selected bill"}</span><button className="btn-ghost" onClick={() => setFilters(previous => ({ ...previous, billId: null }))}>Show all allottee bills</button></div>}
         <div className="filter-grid">
           <label htmlFor="bills-search">Search invoice / reference<input id="bills-search" className="inp" type="search" value={filters.search} onChange={e => changeFilter("search", e.target.value)} /></label>
@@ -21,6 +21,8 @@ export function BillFilters({ filters, billRows, setFilters, changeFilter, types
               <option value="Unpaid">Unpaid</option>
               <option value="Partial">Partial</option>
               <option value="Paid">Paid</option>
+              <option value="Settled">Settled</option>
+              <option value="Waived">Waived</option>
             </select>
           </div>
           <div>

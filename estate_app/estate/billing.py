@@ -28,7 +28,7 @@ def holiday_rent(full_month_rent, year, month, start=None, end=None):
     return {'days_in_month': days, 'closed_days': closed, 'waiver_amount': amount - rent, 'applicable_rent': rent}
 
 
-def annual_revisions(rate, as_of, through):
+def annual_revisions(rate, as_of, through, *, flat=False):
     rate = Decimal(str(rate))
     if not rate.is_finite() or rate <= 0 or rate != rate.quantize(Decimal('0.0001')):
         raise ValidationError({'rate': 'Enter a positive rate with at most four decimal places.'})
@@ -40,7 +40,7 @@ def annual_revisions(rate, as_of, through):
     for year in range(max(2026, as_of.year), through.year + 1):
         day = dt.date(year, 4, 1)
         if as_of < day <= through:
-            rate = (rate * Decimal('1.05')).quantize(Decimal('0.0001'), rounding=ROUND_HALF_UP)
+            rate = (rate * Decimal('1.05')).quantize(Decimal('0.01' if flat else '0.0001'), rounding=ROUND_HALF_UP)
             revisions.append({'effective_date': day, 'rate': rate})
     return revisions
 
@@ -51,10 +51,11 @@ def rent_schedule(term, year, month):
     revision = term.original_award.rent_revisions.filter(effective_date__lte=through).order_by('-effective_date').first()
     if revision is None:
         raise ValidationError({'rent_revision': 'Record the accepted rate and its as-of date on the original award.'})
-    proposed = annual_revisions(revision.rate, revision.effective_date, through)
+    flat = term.rent_basis == 'flat'
+    proposed = annual_revisions(revision.rate, revision.effective_date, through, flat=flat) if term.notice_governed else []
     return {'revision_id': revision.pk, 'rate': revision.rate, 'area': term.actual_area,
             'approval_reference': revision.approval_reference,
-            'full_month_rent': (revision.rate * term.actual_area).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+            'full_month_rent': (revision.rate if flat else revision.rate * term.actual_area).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
             'missing_revision_dates': [item['effective_date'] for item in proposed],
             'proposed_rate': proposed[-1]['rate'] if proposed else revision.rate}
 

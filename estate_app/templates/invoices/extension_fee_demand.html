@@ -1,0 +1,56 @@
+{% extends "invoices/base.html" %}
+{% block title %}Extension fee demand{% endblock %}
+{% block toolbar %}
+<div class="print-bar">
+  <button class="btn btn-secondary" onclick="window.close()">Close</button>
+  <button class="btn btn-primary" onclick="window.print()">Print / Save PDF</button>
+</div>
+{% endblock %}
+{% block content %}
+<main class="invoice">
+  {% include "invoices/individual/letterhead.html" %}
+  <div class="meta-row">
+    <div class="meta-block">
+      <div class="meta-label">Demand Details</div>
+      <div class="meta-line"><span class="meta-key">Ref. No.</span><span class="meta-val inv-no">{{ reference_placeholder }}</span></div>
+      <br>
+      <div class="meta-line"><span class="meta-key">Invoice Date</span><span class="meta-val">__________/_________/20_________</span></div>
+      <br>
+      <div class="meta-line"><span class="meta-key">Supplier GSTIN</span><span class="meta-val">{{ invoice_settings.supplier_gstin }}</span></div>
+      <div class="meta-line"><span class="meta-key">Place of Supply</span><span class="meta-val">{{ invoice_settings.place_of_supply }}</span></div>
+    </div>
+    <div class="meta-divider"></div>
+    {% include "invoices/individual/recipient.html" with recipient=allottee %}
+  </div>
+  <h1 class="sec-title">Extension fee demand</h1>
+  <table class="inv-table">
+    <thead><tr>
+      <th scope="col">#</th><th scope="col">Description</th><th scope="col" class="right">Amount (Rs.)</th>
+      <th scope="col" class="right">Tax (Rs.)</th><th scope="col" class="right">Total (Rs.)</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>1</td><td><div class="item-name">Extension fee</div><div class="item-sub">{{ charge.description|linebreaksbr }}</div></td>
+        <td class="right">{{ fee_amount }}</td><td class="right">{{ tax_amount }}</td><td class="right">{{ assessed_amount }}</td></tr>
+    </tbody>
+  </table>
+  <div class="summary-wrap">
+    <div class="dues-block">
+      <div class="dues-title">Dues Summary</div>
+      <div class="dues-line ruled"><span class="dues-key">Extension fee (before tax)</span><span class="dues-val">Rs. {{ fee_amount }}</span></div>
+      <div class="dues-line ruled"><span class="dues-key">Tax</span><span class="dues-val">Rs. {{ tax_amount }}</span></div>
+      <div class="dues-line ruled"><span class="dues-key">Total assessed</span><span class="dues-val">Rs. {{ assessed_amount }}</span></div>
+      <div class="dues-line"><strong>Net Payable</strong><span class="dues-val">Rs. {{ balance_due }}</span></div>
+    </div>
+    <div class="meta-divider"></div>
+    <div class="tax-block">
+      <div class="dues-title">Payment Status</div>
+      <div class="dues-line ruled"><span class="dues-key">Amount received</span><span class="dues-val credit">Rs. {{ amount_received }}</span></div>
+      <div class="dues-line ruled"><span class="dues-key">Amount waived</span><span class="dues-val credit">Rs. {{ waiver_amount }}</span></div>
+      <div class="dues-line"><span class="dues-key">Balance outstanding</span><span class="dues-val debit">Rs. {{ balance_due }}</span></div>
+    </div>
+  </div>
+  {% include "invoices/individual/totals.html" with rounded_total_payable=balance_due rounded_amount_in_words=balance_in_words %}
+  {% include "invoices/individual/bank_remarks.html" %}
+  {% include "invoices/individual/signature.html" %}
+</main>
+{% endblock %}

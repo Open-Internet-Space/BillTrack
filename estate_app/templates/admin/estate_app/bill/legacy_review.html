@@ -9,7 +9,7 @@
 <p>Reason for correction — {{ review.reason }}</p>
 <form method="post">{% csrf_token %}<input type="hidden" name="confirmation" value="{{ review.confirmation }}"><button type="submit">Confirm reviewed change</button></form>
 {% else %}
-<h2>{% if form.action == 'link' %}Assign this bill to its documented shop allotment{% else %}Convert this bill to the notice billing policy{% endif %}</h2>
+<h2>{% if form.action == 'link' %}Assign this bill to its documented allotment term{% else %}Convert this bill to the notice billing policy{% endif %}</h2>
 <form method="post">{% csrf_token %}<input type="hidden" name="action" value="{{ form.action }}">{{ form.as_p }}<button type="submit">Preview change</button></form>
 {% endif %}
 <p><a href="{% url 'admin:estate_app_bill_change' bill.pk %}">Return to invoice</a></p>

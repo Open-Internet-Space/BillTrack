@@ -73,6 +73,11 @@ class EstateTransferTests(TestCase):
 
     def test_replace_round_trips_the_complete_estate_graph_without_recalculating_money(self):
         from estate_app.data_transfer.restoration import restore_data
+        entry = self.term.tenant
+        Allotment.objects.create(tenant=entry, source_notice='Other award',
+            award_reference='Register-only award', letter_issued_on=dt.date(2028, 1, 1),
+            start_date=dt.date(2028, 1, 1), end_date=dt.date(2028, 12, 31),
+            actual_area=75, measurement_reference='Register term measurement')
         data=export_data()
         objects,logo=validate_data(data)
         restore_data(objects,logo,'replace')

@@ -4,7 +4,7 @@ import { matchesSearch, withinDates } from "../../Filters";
 import RefreshButton from "../../RefreshButton";
 import { formatCurrency, formatDate } from "../../shared/format.js";
 
-export function Payments({ payments, refresh, refreshing }) {
+export function Payments({ payments, refresh, refreshing, onEditReceipt }) {
   const paymentRows = useMemo(() => Array.isArray(payments) ? payments : [], [payments]);
   const [filters, setFilters] = useState({ tenant: "all", year: "all", month: "all", search: "", from: "", to: "" });
   const tenantOptions = useMemo(() => {
@@ -69,7 +69,12 @@ export function Payments({ payments, refresh, refreshing }) {
           <tbody>
             {pageRows.map(p => (
               <tr key={p.id} className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
-                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{formatDate(p.payment_date)}</td>
+                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>
+                  {formatDate(p.payment_date)}
+                  {onEditReceipt && p.source !== 'security_application' && <div style={{ marginTop: 6 }}>
+                    <button className="btn-ghost" onClick={() => onEditReceipt(p)}>Edit receipt</button>
+                  </div>}
+                </td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", color: "#f0a500" }}>{p.bill_invoice}</td>
                 <td style={{ padding: "10px 14px" }}>{(p.bill_tenant_display_name || p.bill_tenant_name)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{p.bill_period}</td>

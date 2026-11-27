@@ -44,9 +44,7 @@ def emergency_authenticator(request):
         except service.AccountError as exc:
             error = str(exc)
     from django.contrib import admin
-    response = render(request, 'admin/emergency_authenticator.html', {
+    return render(request, 'admin/emergency_authenticator.html', {
         **admin.site.each_context(request), 'title': 'Superuser emergency TOTP',
         'form': form, 'secret': secret, 'qr_image': image, 'error': error,
     })
-    response['Referrer-Policy'] = 'no-referrer'
-    return response

@@ -60,6 +60,41 @@ test("individual and selected-bill printing fetch authorized documents", async (
   } finally { close(); open.mockRestore(); URL.createObjectURL = oldCreate; URL.revokeObjectURL = oldRevoke; }
 });
 
+test('extension demands share the Bills list and use their own print and receipt actions', async () => {
+  const fee = { id: 1, kind: 'extension_fee', tenant: 1, allotment: 7, assessed_on: '2026-12-01',
+    register_label: 'Test Allottee', description: 'Extension for second year', authority_reference: 'FEE-REF',
+    balance_due: '900.00', gross_amount: '1000.00', amount_paid: '100.00', status: 'Partial' };
+  const reply = data => Promise.resolve({ ok: true, json: async () => data });
+  const popup = { closed: false, location: { replace: jest.fn() }, addEventListener: jest.fn() };
+  const open = jest.spyOn(window, 'open').mockReturnValue(popup);
+  const oldCreate = URL.createObjectURL;
+  URL.createObjectURL = jest.fn(() => 'blob:extension');
+  const { container, close } = await signedInApp(url => {
+    if (url.endsWith('/estate-charges/?kind=extension_fee')) return reply([fee]);
+    if (url.endsWith('/estate-charges/1/demand/')) return Promise.resolve({ ok: true, blob: async () => new Blob(['Demand']) });
+    return null;
+  });
+  try {
+    const button = (root, label) => [...root.querySelectorAll('button')].find(node => node.textContent === label);
+    await act(async () => button(container, 'Bills').click());
+    const [demand, monthly] = container.querySelectorAll('tbody tr');
+    expect(demand.textContent).toContain('Extension for second year');
+    expect(demand.textContent).toContain('900.00');
+    expect(monthly.textContent).toContain('TEST-1');
+    act(() => container.querySelector('[aria-label="Select all bills"]').click());
+    expect(button(container, 'Print Selected (1)')).toBeDefined();
+    await act(async () => button(demand, 'Print extension fee demand').click());
+    expect(global.fetch).toHaveBeenCalledWith('/api/estate-charges/1/demand/', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Token test-token' }) }));
+    expect(popup.location.replace).toHaveBeenCalledWith('blob:extension');
+    await act(async () => button(demand, 'Record charge receipt').click());
+    expect(container.querySelector('form[aria-label="Charge receipt"]')).not.toBeNull();
+    await act(async () => button(container.querySelector('dialog'), 'Cancel').click());
+    act(() => choose(container.querySelector('#bills-status'), 'Partial'));
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(container.querySelector('tbody').textContent).toContain('Extension fee demand');
+  } finally { close(); open.mockRestore(); URL.createObjectURL = oldCreate; }
+});
+
 test.each([true, false])('printing handles blocked windows or failed requests (blocked: %s)', async blocked => {
   const popup = { opener: window, close: jest.fn() };
   const open = jest.spyOn(window, 'open').mockReturnValue(blocked ? null : popup);
@@ -205,4 +240,110 @@ test('notice bill can use approved monthly rates and records the explicit raised
     expect(JSON.parse(save[1].body)).toHaveProperty('raised_date','2026-11-01');
     expect(JSON.parse(save[1].body)).not.toHaveProperty('full_month_rent');
   } finally {close();}
+});
+
+
+test.each([false, true])('area × rate supplies rounded full rent to preview and save (bulk: %s)', async bulk => {
+  const { container, close } = await signedInApp(url => {
+    if (url.endsWith('/allotments/')) return Promise.resolve({ ok: true, json: async () => [
+      { id: 7, tenant: 1, start_date: '2020-01-01', effective_end: '2100-12-31' }] });
+    if (url.endsWith('/bills/preview/')) return Promise.resolve({ ok: true, json: async () => ({ months: [
+      { year: 2026, month: 6, full_month_rent: '10.08', already_exists: false }] }) });
+    return null;
+  });
+  const button = text => [...container.querySelectorAll('button')].find(item => item.textContent === text);
+  const input = name => container.querySelector(`#billform-${name}`);
+  try {
+    await act(async () => button('Bills').click());
+    await act(async () => button('+ Raise Bill').click());
+    act(() => {
+      fillInput(input('from-month'), '2026-06');
+      fillInput(input('to-month'), bulk ? '2026-07' : '2026-06');
+      fillInput(input('rent'), '800');
+      choose(input('rent-method'), 'calculated');
+    });
+    act(() => fillInput(input('rent-area'), '1'));
+    expect(input('rent')).toBeNull();
+    expect(button('Preview monthly amounts').disabled).toBe(true);
+    act(() => fillInput(input('rent-rate'), '10.0750'));
+    expect(container.querySelector('output').textContent).toContain('10.08');
+    await act(async () => button('Preview monthly amounts').click());
+    const findPost = path => JSON.parse(global.fetch.mock.calls.find(([url, options]) =>
+      url === path && options.method === 'POST')[1].body);
+    expect(findPost('/api/bills/preview/')).toMatchObject({ full_month_rent: '10.08' });
+    act(() => choose(input('rent-method'), 'direct'));
+    expect(input('rent').value).toBe('800');
+    expect(input('rent-area')).toBeNull();
+    expect(button('Raise Bill').disabled).toBe(true);
+    act(() => choose(input('rent-method'), 'calculated'));
+    await act(async () => button('Raise Bill').click());
+    const saved = findPost(bulk ? '/api/bills/bulk-create/' : '/api/bills/');
+    expect(saved).toMatchObject({ full_month_rent: '10.08' });
+    expect(saved).not.toHaveProperty('rent_area');
+    expect(saved).not.toHaveProperty('rent_rate');
+  } finally { close(); }
+});
+
+
+test('edit bill can replace full-month rent with a calculation while preserving closure dates', async () => {
+  const { container, close } = await signedInApp((url, options) => {
+    if (url.endsWith('/bills/1/preview/')) return Promise.resolve({ ok: true, json: async () => ({ months: [
+      { year: 2026, month: 11, full_month_rent: '1500.00', rent: '1450.00' }] }) });
+    if (url.endsWith('/bills/') && !options.method) return Promise.resolve({ ok: true, json: async () => [
+      { ...sampleBill, rent: '100.00', holiday_start_date: '2026-11-10', holiday_end_date: '2026-11-10' }] });
+    return null;
+  });
+  const button = text => [...container.querySelectorAll('button')].find(item => item.textContent === text);
+  const input = name => container.querySelector(`#billeditform-${name}`);
+  try {
+    await act(async () => button('Bills').click());
+    await act(async () => button('Edit').click());
+    act(() => choose(input('rent-method'), 'calculated'));
+    act(() => {
+      fillInput(input('rent-area'), '150');
+      fillInput(input('rent-rate'), '10');
+      fillInput(input('change-reason'), 'Correct area-based rent');
+    });
+    await act(async () => button('Preview monthly amounts').click());
+    await act(async () => button('Save Changes').click());
+    const [, options] = global.fetch.mock.calls.find(([url, options]) =>
+      url.endsWith('/bills/1/') && options.method === 'PATCH');
+    expect(JSON.parse(options.body)).toMatchObject({
+      full_month_rent: '1500.00', holiday_start_date: '2026-11-10', holiday_end_date: '2026-11-10',
+      change_reason: 'Correct area-based rent'
+    });
+  } finally { close(); }
+});
+
+
+test.each(['Bills', 'Payments', 'Payment Adjustments'])('%s can correct a receipt in place', async page => {
+  const payment = { id: 13, bill: 1, bill_tenant: 1, bill_tenant_name: 'Test Allottee', bill_invoice: 'TEST-1',
+    payment_date: '2026-11-11', amount: '50.00', penalty_paid: '0.00', receipt_no: 'ORIGINAL', source: 'receipt' };
+  const reply = data => Promise.resolve({ ok: true, json: async () => data });
+  const { container, close } = await signedInApp(url => url.startsWith('/api/payments/')
+    ? reply(url.endsWith('/payments/13/') ? payment : [payment]) : null);
+  const button = text => [...container.querySelectorAll('button')].find(item => item.textContent === text);
+  try {
+    await act(async () => button(page).click());
+    if (page === 'Bills') {
+      const receipts = button('Payment receipts');
+      expect(receipts.closest('td').cellIndex).toBe(1);
+      await act(async () => receipts.click());
+    }
+    if (page === 'Payment Adjustments') act(() => choose(container.querySelector('#adjustment-vendor'), '1'));
+    const edit = button('Edit receipt');
+    if (page !== 'Bills') expect(edit.closest('td').cellIndex).toBe(page === 'Payments' ? 0 : 1);
+    await act(async () => edit.click());
+    const reference = container.querySelector('#paymentform-receipt-no');
+    expect(reference.value).toBe('ORIGINAL');
+    expect(button('Save receipt').disabled).toBe(true);
+    act(() => {
+      fillInput(reference, 'CORRECTED');
+      fillInput(container.querySelector('#paymentform-reason'), 'Correct ref from actual receipt');
+    });
+    await act(async () => button('Save receipt').click());
+    const [, call] = global.fetch.mock.calls.find(([url, options]) => url.endsWith('/payments/13/') && options.method === 'PATCH');
+    expect(JSON.parse(call.body)).toMatchObject({ receipt_no: 'CORRECTED', change_reason: 'Correct ref from actual receipt' });
+    expect(JSON.parse(call.body)).not.toHaveProperty('bill');
+  } finally { close(); }
 });

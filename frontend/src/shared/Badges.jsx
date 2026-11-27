@@ -1,6 +1,6 @@
 
 export const StatusBadge = ({ status }) => {
-  const map = { Paid: "#22c55e", Unpaid: "#f87171", Partial: "#f59e0b" };
+  const map = { Paid: "#22c55e", Settled: "#22c55e", Waived: "#9ca3af", Unpaid: "#f87171", Partial: "#f59e0b" };
   return (
     <span style={{
       background: map[status] + "22", color: map[status],

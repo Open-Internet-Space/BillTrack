@@ -11,8 +11,7 @@ from .formatting import round_rupees
 
 NOTICE_NOTE = ('Payment is due within seven calendar days after raising the invoice. '
     'Late interest is 12% per annum simple interest on unpaid billed principal, using actual days / 365, '
-    'only for days after the later of the deadline and confirmed email dispatch. '
-    'GST applies to net rent after any holiday waiver.')
+    'only for days after the later of the deadline and confirmed email dispatch.')
 
 
 def invoice_context(bill, system_settings=None):
@@ -33,7 +32,6 @@ def invoice_context(bill, system_settings=None):
         'bill': bill,
         'notice_policy': bill.billing_policy == 'notices_368_369',
         'policy_note': NOTICE_NOTE if bill.billing_policy == 'notices_368_369' else '',
-        'shop_code': bill.allotment.shop.code if bill.allotment_id else '',
         'full_month_rent': format_money(bill.full_month_rent) if bill.full_month_rent is not None else None,
         'holiday_waiver': format_money(bill.holiday_waiver),
         'invoice_no': bill.invoice_no or f"Pending-{bill.id}",
@@ -73,11 +71,10 @@ def invoice_context(bill, system_settings=None):
 
 
 def consolidated_invoice_context(bills, system_settings=None):
-    # Carry-forward and invoice groups share the same person-and-term boundary.
     if not bills:
         return None
 
-    groups = {(bill.tenant_id, bill.allotment_id, bill.is_draft) for bill in bills}
+    groups = {(bill.tenant_id, bill.is_draft) for bill in bills}
     if len(groups) != 1:
         return None
 
@@ -94,31 +91,44 @@ def consolidated_invoice_context(bills, system_settings=None):
     igst = sum((bill.igst_on_rent for bill in ordered), Decimal('0'))
     total_amount = sum((bill.total_amount for bill in ordered), Decimal('0'))
     amount_paid = sum((bill.amount_paid_including_penalty for bill in ordered), Decimal('0'))
-    principal_paid = sum((bill.amount_paid for bill in ordered), Decimal('0'))
-    balance_due = max(Decimal('0'), total_amount - principal_paid)
-    excess_paid = max(Decimal('0'), principal_paid - total_amount)
-    current_penalty = sum((bill.penalty for bill in ordered), Decimal('0'))
 
     today = timezone.localdate()
     last_bill = ordered[-1]
     system_settings = system_settings if system_settings is not None else SystemSettings.get_settings()
     branding = invoice_branding_context(system_settings, last_bill.issue_date.year if last_bill.issue_date else last_bill.year)
-    previous_due_bills = Bill.objects.filter(
+    older_bills = Bill.objects.filter(
         tenant=tenant,
-        allotment_id=last_bill.allotment_id,
         status__in=['Unpaid', 'Partial'],
         due_date__lt=today,
     ).filter(
         Q(billing_policy='legacy_receipt', issue_date__isnull=False)
         | Q(billing_policy='notices_368_369', raised_date__isnull=False)
-    ).filter(
-        Q(year__lt=last_bill.year) |
-        Q(year=last_bill.year, month__lt=last_bill.month)
     ).exclude(pk__in=selected_ids).prefetch_related('payments')
-    previous_balance = sum((bill.balance_due for bill in previous_due_bills), Decimal('0'))
-    previous_penalty = sum((bill.penalty for bill in previous_due_bills), Decimal('0'))
-    penalty = current_penalty + previous_penalty
-    total_payable = max(Decimal('0'), balance_due + current_penalty + previous_balance + previous_penalty - excess_paid)
+
+    by_term = {}
+    for bill in ordered:
+        by_term.setdefault(bill.allotment_id, []).append(bill)
+
+    # Consolidation is for printing. Carry-forward and credits stay with each term.
+    balance_due = excess_paid = credit_applied = previous_balance = penalty = total_payable = Decimal('0')
+    for term_id, term_bills in by_term.items():
+        last_in_term = term_bills[-1]
+        previous_due_bills = list(older_bills.filter(
+            Q(year__lt=last_in_term.year) | Q(year=last_in_term.year, month__lt=last_in_term.month),
+            allotment_id=term_id,
+        ))
+        term_previous_balance = sum(bill.balance_due for bill in previous_due_bills)
+        term_previous_penalty = sum(bill.penalty for bill in previous_due_bills)
+        term_balance = sum(bill.total_amount - bill.amount_paid for bill in term_bills)
+        term_penalty = sum(bill.penalty for bill in term_bills) + term_previous_penalty
+        balance_due += max(Decimal('0'), term_balance)
+        term_due_before_credit = max(Decimal('0'), term_balance) + term_penalty + term_previous_balance
+        term_credit = max(Decimal('0'), -term_balance)
+        excess_paid += term_credit
+        credit_applied += min(term_credit, term_due_before_credit)
+        previous_balance += term_previous_balance
+        penalty += term_penalty
+        total_payable += max(Decimal('0'), term_balance + term_penalty + term_previous_balance)
 
     first_period = f"{ordered[0].get_month_name()} {ordered[0].year}"
     last_period = f"{ordered[-1].get_month_name()} {ordered[-1].year}"
@@ -140,10 +150,8 @@ def consolidated_invoice_context(bills, system_settings=None):
         'is_draft': all(bill.is_draft for bill in ordered),
         'notice_policy': notice_policy,
         'mixed_policies': mixed_policies,
-        'policy_note': ('Mixed billing policies: each monthly line retains its own deadline and interest basis. '
-            'Legacy receipt-policy lines retain the confirmed-receipt deadline. Notice-policy lines: ' + NOTICE_NOTE)
+        'policy_note': 'Use the payment deadlines shown for each month. Late interest applies under the terms of each bill.'
             if mixed_policies else NOTICE_NOTE if notice_policy else '',
-        'shop_code': last_bill.allotment.shop.code if last_bill.allotment_id else '',
         'bills': ordered,
         'invoice_no': f"Consolidated ({billing_period})",
         'dispatch_ref_no': branding['reference_placeholder'],
@@ -167,10 +175,10 @@ def consolidated_invoice_context(bills, system_settings=None):
         'total_amount': format_money(total_amount),
         'total_amount_before_gst': format_money(rent + electric + water),
         'previous_balance': format_money(previous_balance),
-        'previous_penalty': format_money(previous_penalty),
         'penalty': format_money(penalty),
         'amount_paid': format_money(amount_paid),
         'excess_paid': format_money(excess_paid),
+        'credit_applied': format_money(credit_applied),
         'balance_due': format_money(balance_due),
         'total_payable': format_money(total_payable),
         'rounded_total_payable': f"{round_rupees(total_payable):,.0f}",
@@ -181,7 +189,6 @@ def consolidated_invoice_context(bills, system_settings=None):
                 'index': index,
                 'period': f"{bill.get_month_name()} {bill.year}",
                 'invoice_no': bill.invoice_no or f"Pending-{bill.id}",
-                'policy_label': bill.get_billing_policy_display(),
                 'due_date': bill.due_date.strftime('%d %b %Y') if bill.due_date else 'Draft — not raised',
                 'rent': format_money(bill.rent),
                 'full_month_rent': format_money(bill.full_month_rent) if bill.full_month_rent is not None else None,
@@ -193,7 +200,7 @@ def consolidated_invoice_context(bills, system_settings=None):
                 'rate_snapshot': f'{bill.rate_snapshot:.4f}' if bill.rate_snapshot is not None else None,
                 'area_snapshot': f'{bill.area_snapshot:.4f}' if bill.area_snapshot is not None else None,
                 'rent_revision_reference': bill.rent_revision_reference,
-                'notes': bill.notes,
+                'notes': bill.notes if bill.billing_category != 'other' else '',
                 'electric_reading': bill.electric_reading,
                 'electric': format_money(bill.electric),
                 'water': format_money(bill.water),

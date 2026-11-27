@@ -8,7 +8,7 @@
       <div class="dues-line ruled"><span class="dues-key">Current Dues Total</span><span class="dues-val">Rs. {{ total_amount }}</span></div>
       <div class="dues-line ruled"><span class="dues-key">Pending Dues (Previous Balance)</span><span class="dues-val debit">Rs. {{ previous_balance }}</span></div>
       <div class="dues-line ruled"><span class="dues-key">Penalty / Interest</span><span class="dues-val debit">Rs. {{ penalty }}</span></div>
-      {% if invoice.excess_paid != '0.00' %}<div class="dues-line ruled"><span class="dues-key">Excess Paid / Credit</span><span class="dues-val credit">Rs. {{ excess_paid }}</span></div>{% endif %}
+      {% if invoice.credit_applied != '0.00' %}<div class="dues-line ruled"><span class="dues-key">Credit Applied</span><span class="dues-val credit">Rs. {{ invoice.credit_applied }}</span></div>{% endif %}
       <div class="dues-line" style="margin-top:4px"><span class="dues-key" style="font-weight:700;color:var(--ink)">NET PAYABLE</span><span class="dues-val" style="font-size:11.5pt;color:var(--accent)">Rs. {{ rounded_total_payable }}</span></div>
     </div>
 

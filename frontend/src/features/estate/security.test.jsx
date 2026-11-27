@@ -1,4 +1,4 @@
-import { act, fillInput, signedInApp, createRoot } from '../../test-support/app';
+import { act, choose, fillInput, signedInApp, createRoot } from '../../test-support/app';
 import { SecurityDecisionForm } from './EstateSecurity';
 import API from '../../api';
 
@@ -9,7 +9,8 @@ test('staff record actual deposit receipts against the original award and cannot
   const fixture=(url,options)=>url.includes('/estate-security/')?reply(account):url.includes('/allotments/')?reply([{id:11,shop:1,shop_code:'A101',tenant:1,original_award_id:91,award_reference:'Renewal'}]):url.includes('/shops/')?reply([{id:1,code:'A101',name:'Shop'}]):url.includes('/security-movements/')?reply({id:1}):null;
   const {container,close}=await signedInApp(fixture);
   try{
-    await act(async()=>button(container,'Allotments').click());await act(async()=>button(container,'Details').click());
+    await act(async()=>button(container,'Allotments').click());
+    await act(async()=>button(container,'View term history').click());await act(async()=>button(container,'Details').click());
     expect(button(container,'Review security requirement')).toBeUndefined();
     await act(async()=>button(container,'Record deposit receipt').click());
     for(const [id,value] of [['security-receipt-amount','400'],['security-receipt-reference','DD-42'],['security-receipt-reason','Actual security receipt evidence']]) await act(async()=>fillInput(container.querySelector(`#${id}`),value));
@@ -25,9 +26,16 @@ test('security confirmation requires the reviewed values and changing them inval
   const container=document.createElement('div');document.body.appendChild(container);const root=createRoot(container);const save=jest.fn();
   try{
     await act(async()=>root.render(<SecurityDecisionForm account={account} action="requirement" chain={[]} bills={[]} onSave={save} onClose={()=>{}} />));
+    expect(container.querySelector('#security-timing').value).toBe('');
+    act(()=>choose(container.querySelector('#security-timing'),'before'));
+    act(()=>fillInput(container.querySelector('#security-offer-date'),'2025-09-01'));
+    act(()=>fillInput(container.querySelector('#security-pre-order-due-date'),'2025-09-12'));
     for(const [id,value] of [['security-initial-rent','1800'],['security-decision-reference','Approval-1'],['security-decision-reason','Reviewed initial rent basis']]) await act(async()=>fillInput(container.querySelector(`#${id}`),value));
     expect(button(container,'Confirm reviewed security decision')).toBeUndefined();
     await act(async()=>container.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    expect(post).toHaveBeenCalledWith('/estate-security/91/decision-preview/', expect.objectContaining({
+      timing:'before',offer_date:'2025-09-01',pre_order_due_date:'2025-09-12'
+    }));
     await act(async()=>button(container,'Confirm reviewed security decision').click());
     expect(save).toHaveBeenCalledWith({confirmation:'signed-security'});
     await act(async()=>fillInput(container.querySelector('#security-initial-rent'),'1900'));

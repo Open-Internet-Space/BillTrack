@@ -17,13 +17,13 @@ class EmailDraftTests(TestCase):
 
     def generate(self, **extra):
         from estate_app.models import EmailTemplate
-        template=EmailTemplate.objects.first()
+        template=EmailTemplate.objects.get(name='Invoice covering letter')
         return self.api.post('/api/email-drafts/generate/',{'allottee_id':self.tenant.pk,'bill_ids':[self.bill.pk],'template_id':template.pk,**extra},format='json')
 
-    def test_three_reusable_templates_and_no_saved_allottee_drafts(self):
+    def test_reusable_templates_and_no_saved_allottee_drafts(self):
         from estate_app.models import EmailTemplate
         self.assertEqual(len(self.api.get('/api/email-templates/').data),3)
-        template=EmailTemplate.objects.first();before=(template.subject,template.body)
+        template=EmailTemplate.objects.get(name='Invoice covering letter');before=(template.subject,template.body)
         for tenant in [self.tenant,Tenant.objects.create(name='Second vendor',type='Shop')]:
             response=self.generate(allottee_id=tenant.pk,bill_ids=[])
             self.assertEqual(response.status_code,200,response.data)
@@ -43,6 +43,34 @@ class EmailDraftTests(TestCase):
         self.assertEqual(self.api.get('/api/email-templates/').status_code,403)
         self.assertEqual(self.generate().status_code,403)
 
+    def test_demand_of_dues_uses_selected_months_and_template_cc(self):
+        from estate_app.models import EmailTemplate
+        from estate_app.reminders.composition import TemplateSelectionForm
+
+        self.tenant.allotment_description = 'Service kiosk'
+        self.tenant.save()
+        other_month = Bill.objects.create(tenant=self.tenant, month=11, year=2025, rent=100)
+        config = SystemSettings.get_settings()
+        config.email_draft_cc = 'default@example.invalid'
+        config.save()
+        template = EmailTemplate.objects.create(
+            name='Demand of dues', manual_only=True, cc='office@example.invalid, records@example.invalid',
+            subject='Demand of dues against M/s {allottee_name} for {allotment_description} '
+                    'for the period {billing_start_month} to {billing_end_month} - reg.',
+            body='Please find the scanned copy attached.',
+        )
+        draft = self.generate(template_id=template.pk, bill_ids=[self.bill.pk, other_month.pk]).data
+        self.assertEqual(draft['to'], 'vendor@example.invalid')
+        self.assertEqual(draft['cc'], 'office@example.invalid, records@example.invalid')
+        self.assertEqual(draft['subject'], 'Demand of dues against M/s Example Vendor for Service kiosk '
+                         'for the period November 2025 to January 2026 - reg.')
+        self.assertEqual(draft['body'], template.body)
+        self.assertEqual(self.generate(template_id=template.pk, bill_ids=[]).status_code, 400)
+        self.tenant.allotment_description = ''
+        self.tenant.save()
+        self.assertEqual(self.generate(template_id=template.pk).status_code, 400)
+        self.assertNotIn(template, TemplateSelectionForm().fields['template'].queryset)
+
     def test_mixed_allottees_and_missing_bills_rejected(self):
         other=Tenant.objects.create(name='Other Vendor',type='Shop')
         bill=Bill.objects.create(tenant=other,month=1,year=2026,rent=10)
@@ -50,28 +78,30 @@ class EmailDraftTests(TestCase):
         self.assertEqual(self.generate(bill_ids=[999999]).status_code,400)
         self.assertEqual(self.generate(bill_ids=[self.bill.pk,self.bill.pk]).status_code,400)
 
-    def test_missing_email_and_private_cc(self):
+    def test_missing_email_and_default_copy_recipients(self):
         self.tenant.email='';self.tenant.save()
-        config=SystemSettings.get_settings();config.email_draft_cc='authority@example.invalid';config.save()
+        config=SystemSettings.get_settings();config.email_draft_cc='authority@example.invalid'
+        config.email_draft_bcc='records@example.invalid';config.save()
         draft=self.generate().data
         self.assertEqual(draft['to'],'');self.assertEqual(draft['cc'],'authority@example.invalid')
+        self.assertEqual(draft['bcc'],'records@example.invalid')
         self.assertIn('Receipt not confirmed',draft['body'])
 
     def test_template_placeholders_are_literal_only(self):
         from estate_app.models import EmailTemplate
         for body in ['{unknown}','{allottee_name.__class__}','{allottee_name!r}','{allottee_name:>100}']:
             with self.assertRaises(ValidationError):EmailTemplate(name='Bad',subject='Hello',body=body).full_clean()
-        template=EmailTemplate.objects.first();template.body='{{literal}} {allottee_name}';template.save()
+        template=EmailTemplate.objects.get(name='Invoice covering letter');template.body='{{literal}} {allottee_name}';template.save()
         self.assertEqual(self.generate().data['body'],'{literal} Example Vendor')
 
     def test_expanded_subject_newlines_rejected_before_copy(self):
         from estate_app.models import EmailTemplate
-        template=EmailTemplate.objects.first();template.subject='{bill_details}';template.save()
+        template=EmailTemplate.objects.get(name='Invoice covering letter');template.subject='{bill_details}';template.save()
         self.assertEqual(self.generate(template_id=template.pk).status_code,400)
 
     def test_inactive_template_rejected(self):
         from estate_app.models import EmailTemplate
-        template=EmailTemplate.objects.first();template.active=False;template.save()
+        template=EmailTemplate.objects.get(name='Invoice covering letter');template.active=False;template.save()
         self.assertEqual(self.generate(template_id=template.pk).status_code,400)
 
     def test_bad_headers_and_cc_rejected(self):

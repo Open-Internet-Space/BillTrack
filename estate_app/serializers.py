@@ -16,11 +16,24 @@ from .models import UserProfile, Tenant, Bill, Payment, SystemSettings
 # ── User ──────────────────────────────────────────────────────────────────────
 class UserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
+    premises_enabled = serializers.SerializerMethodField()
+    allotment_details_enabled = serializers.SerializerMethodField()
+    bill_email_copy_enabled = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'is_superuser']
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'role', 'is_superuser', 'premises_enabled',
+                  'allotment_details_enabled', 'bill_email_copy_enabled']
         read_only_fields = ['is_superuser']
+
+    def get_premises_enabled(self, obj):
+        return SystemSettings.premises_are_enabled()
+
+    def get_bill_email_copy_enabled(self, obj):
+        return SystemSettings.feature_enabled('bill_email_copy_enabled')
+
+    def get_allotment_details_enabled(self, obj):
+        return SystemSettings.feature_enabled('allotment_details_enabled')
 
     def get_role(self, obj):
         try:
@@ -52,8 +65,8 @@ class TenantSerializer(serializers.ModelSerializer):
                   'address', 'address_not_provided', 'active',
                   'due_days', 'penalty_type', 'custom_penalty_rate', 'custom_penalty_lumpsum',
                   'custom_penalty_frequency',
-                  'created_at', 'updated_at', 'last_billed_month']
-        read_only_fields = ['id', 'uuid', 'created_at', 'updated_at']
+                  'created_at', 'updated_at', 'last_billed_month', 'contract_draft']
+        read_only_fields = ['id', 'uuid', 'created_at', 'updated_at', 'contract_draft']
 
     def validate(self, attrs):
         for field in ['custom_penalty_rate', 'custom_penalty_lumpsum']:
@@ -74,7 +87,6 @@ class PaymentSerializer(serializers.ModelSerializer):
     bill_tenant = serializers.IntegerField(source='bill.tenant_id', read_only=True)
     bill_tenant_name = serializers.CharField(source='bill.tenant.name', read_only=True)
     bill_tenant_display_name = serializers.CharField(source='bill.tenant.display_name', read_only=True)
-    bill_shop_code = serializers.CharField(source='bill.allotment.shop.code', read_only=True, default='')
     bill_allotment = serializers.IntegerField(source='bill.allotment_id', read_only=True, allow_null=True)
     bill_year = serializers.IntegerField(source='bill.year', read_only=True)
     bill_month = serializers.IntegerField(source='bill.month', read_only=True)
@@ -82,7 +94,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ['id', 'bill', 'bill_invoice', 'bill_tenant', 'bill_tenant_name', 'bill_tenant_display_name', 'bill_shop_code', 'bill_allotment', 'bill_year', 'bill_month', 'bill_period', 'amount', 'payment_date',
+        fields = ['id', 'bill', 'bill_invoice', 'bill_tenant', 'bill_tenant_name', 'bill_tenant_display_name', 'bill_allotment', 'bill_year', 'bill_month', 'bill_period', 'amount', 'payment_date',
                   'penalty_paid', 'receipt_no', 'notes', 'source', 'operation_id',
                   'recorded_by', 'recorded_by_name', 'created_at']
         read_only_fields = ['id', 'recorded_by', 'created_at', 'source', 'operation_id']
@@ -124,7 +136,6 @@ class BillSerializer(serializers.ModelSerializer):
     # Tenant info (read-only)
     tenant_name = serializers.CharField(source='tenant.name', read_only=True)
     tenant_display_name = serializers.SerializerMethodField()
-    shop_code = serializers.CharField(source='allotment.shop.code', read_only=True, default='')
     tenant_type = serializers.CharField(source='tenant.type', read_only=True)
     tenant_due_days = serializers.IntegerField(source='tenant.due_days', read_only=True)
 
@@ -164,7 +175,7 @@ class BillSerializer(serializers.ModelSerializer):
         model = Bill
         fields = [
             'id', 'invoice_no', 'tenant', 'tenant_name', 'tenant_display_name', 'tenant_type', 'tenant_due_days',
-            'allotment', 'billing_category', 'shop_code',
+            'allotment', 'billing_category',
             'billing_policy', 'raised_date', 'email_dispatched_at', 'dispatch_recipient',
             'dispatch_message_reference', 'dispatch_sender', 'rent_revision', 'rate_snapshot', 'area_snapshot',
             'rent_revision_reference', 'rent_override_reason', 'rate_exception_reference',
@@ -188,7 +199,7 @@ class BillSerializer(serializers.ModelSerializer):
         extra_kwargs = {'due_date': {'required': False}, 'allotment': {'required': False, 'allow_null': True}}
 
     def get_tenant_display_name(self, obj):
-        return f'{obj.tenant.name} — {obj.allotment.shop.code}' if obj.allotment_id else obj.tenant.display_name
+        return obj.tenant.display_name
 
     def validate(self, attrs):
         instance = self.instance
@@ -208,8 +219,10 @@ class BillSerializer(serializers.ModelSerializer):
         if term and tenant and term.tenant_id != tenant.pk:
             raise serializers.ValidationError({'allotment': 'This term belongs to another allottee.'})
         if category == 'other' and not attrs.get('notes', instance.notes if instance else '').strip():
-            raise serializers.ValidationError({'notes': 'Describe the reviewed non-shop monthly charge.'})
+            raise serializers.ValidationError({'notes': 'Describe the reviewed other monthly charge.'})
         if instance is None:
+            if tenant and not tenant.active:
+                raise serializers.ValidationError({'tenant': 'Choose an active allottee.'})
             notice = term and term.notice_governed
             policy = 'notices_368_369' if notice else 'legacy_receipt'
             if attrs.get('billing_policy', policy) != policy:
@@ -218,7 +231,13 @@ class BillSerializer(serializers.ModelSerializer):
             if attrs.get('full_month_rent') is None and 'rent' in attrs:
                 attrs['full_month_rent'] = attrs['rent']
             if policy == 'legacy_receipt' and not any(field in attrs for field in ('full_month_rent', 'rent')):
-                raise serializers.ValidationError({'full_month_rent': 'Enter the reviewed full-month rent.'})
+                if not term or not term.original_award.rent_revisions.exists():
+                    raise serializers.ValidationError({'full_month_rent': 'Enter the reviewed full-month rent.'})
+                from .estate.billing import rent_schedule
+                try:
+                    attrs['full_month_rent'] = rent_schedule(term, attrs['year'], attrs['month'])['full_month_rent']
+                except ModelValidationError as exc:
+                    raise serializers.ValidationError(exc.message_dict if hasattr(exc, 'message_dict') else exc.messages) from exc
         if any(key in attrs and attrs[key] != getattr(instance, key, None)
                for key in ('email_dispatched_at', 'dispatch_recipient', 'dispatch_message_reference')):
             attrs['dispatch_sender'] = self.context['request'].user if attrs.get('email_dispatched_at', getattr(instance, 'email_dispatched_at', None)) else None
@@ -338,8 +357,6 @@ class BillRangeSerializer(serializers.Serializer):
                 'electric_reading': item.get('electric_reading', self.initial_data.get('electric_reading', '')) or '',
             }, context={**self.context, 'allow_nonoverlap_holiday': True})
             serializer.is_valid(raise_exception=True)
-            if not serializer.validated_data['tenant'].active:
-                raise serializers.ValidationError({'tenant': 'Choose an active allottee.'})
             rows.append(serializer)
         first = rows[0].validated_data
         holiday_start, holiday_end = first.get('holiday_start_date'), first.get('holiday_end_date')

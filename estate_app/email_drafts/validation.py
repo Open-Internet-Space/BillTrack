@@ -9,6 +9,8 @@ PLACEHOLDER_DETAILS=(
     ('organisation_name', 'Organisation name', 'The organisation name configured in System Settings.', False),
     ('signing_authority', 'Signing authority', 'The signing authority configured in System Settings; may contain multiple lines.', True),
     ('preparation_date', 'Preparation date', 'The date this email is generated.', False),
+    ('billing_start_month', 'First billing month', 'Earliest month and year among the selected bills.', False),
+    ('billing_end_month', 'Last billing month', 'Latest month and year among the selected bills.', False),
     ('bill_details', 'Bill details', 'References, billing periods, receipt/due status and remaining amounts for selected bills.', True),
     ('outstanding_total', 'Outstanding total', 'The total outstanding for selected bills in INR.', False),
 )

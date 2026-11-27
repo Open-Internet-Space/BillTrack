@@ -14,7 +14,7 @@ class RentRevision(models.Model):
     original_award = models.ForeignKey(Allotment, on_delete=models.PROTECT, related_name='rent_revisions')
     effective_date = models.DateField(help_text='Explicit as-of date for the initial accepted rate; effective date for later approvals.')
     rate = models.DecimalField(max_digits=12, decimal_places=4, validators=[MinValueValidator(Decimal('0.0001'))])
-    approval_reference = models.CharField(max_length=250)
+    approval_reference = models.CharField(max_length=250, blank=True)
     reason = models.TextField()
     exception_reference = models.CharField(max_length=250, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -28,26 +28,33 @@ class RentRevision(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.original_award.shop.code} · {self.effective_date} · {self.rate}/sq ft'
+        return f"{self.original_award.register_label} · {self.effective_date} · {self.rate}{' per month' if self.original_award.rent_basis == 'flat' else '/sq ft'}"
 
     def clean(self):
         if not self.original_award_id or not self.effective_date or self.rate is None:
             return
+        flat = self.original_award.rent_basis == 'flat'
+        if flat and self.rate != self.rate.quantize(Decimal('0.01')):
+            raise ValidationError({'rate': 'Enter the flat monthly charge to at most two decimal places.'})
         if self.original_award.renewal_of_id:
             raise ValidationError({'original_award': 'Rates belong to the original award; renewals share its schedule.'})
         if self.pk and self.bills.exists():
             previous = type(self).objects.get(pk=self.pk)
             if any(getattr(previous, key) != getattr(self, key) for key in ('original_award_id', 'effective_date', 'rate')):
                 raise ValidationError('A billed rate cannot be moved or rewritten; record a later approved revision.')
-        if not self.approval_reference.strip() or not self.reason.strip():
-            raise ValidationError('Record the rate approval reference and reason.')
+        if not self.reason.strip():
+            raise ValidationError({'reason': 'Record the reason for the charge.'})
+        if not self.original_award.notice_governed:
+            return
         rows = list(type(self).objects.filter(original_award_id=self.original_award_id).exclude(pk=self.pk)) + [self]
         rows.sort(key=lambda row: (row.effective_date, row.pk or 0))
+        if any(not row.approval_reference.strip() for row in rows):
+            raise ValidationError({'approval_reference': 'Record the approval reference for notice-based rent.'})
         from ..estate.billing import annual_revisions
         for previous, current in zip(rows, rows[1:]):
             if previous.effective_date == current.effective_date:
                 raise ValidationError({'effective_date': 'This award already has a rate for this effective date.'})
-            due = annual_revisions(previous.rate, previous.effective_date, current.effective_date)
+            due = annual_revisions(previous.rate, previous.effective_date, current.effective_date, flat=flat)
             if not current.exception_reference.strip() and (len(due) != 1
                     or current.effective_date != due[0]['effective_date'] or current.rate != due[0]['rate']):
                 raise ValidationError('Approve the next 5% April revision in order, or record an authorized exception reference.')

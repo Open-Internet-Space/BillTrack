@@ -1,6 +1,6 @@
 # BillTrack
 
-Estate management, shop-wise billing and staff guides: see the [changelog](CHANGELOG.md) and [estate workflow](docs/ESTATE-WORKFLOW.md).
+Estate management, allotment-wise billing and staff guides. See the [changelog](CHANGELOG.md), [estate workflow](docs/ESTATE-WORKFLOW.md), and [extensions and security deposits tutorial](docs/EXTENSIONS-AND-SECURITY-DEPOSITS.md).
 
 Superuser corrections and retained before/after snapshots: [Activity log](docs/ACTIVITY-HISTORY.md).
 
@@ -31,7 +31,7 @@ The normal order is: **make a change → test it → publish the source to GitHu
 
 ## What BillTrack does
 
-BillTrack manages shops, allotments, expiry alerts, bills, receipts, payments, penalties and reports. Use **Knowledge Base** in the sidebar for staff guides. It prints individual, bulk and consolidated invoices. It also includes account approval and recovery, private data export/import, backups and email tools.
+BillTrack manages allotments, expiry alerts, bills, receipts, payments, penalties and reports. The optional premises register covers shops, offices, canteens and other units. Use **Knowledge Base** in the sidebar for staff guides. BillTrack prints individual, bulk and consolidated invoices and extension fee demands. It also includes account approval and recovery, private data export/import, backups and email tools.
 
 A new installation starts without business records or a default account. Enter your organisation details in **Admin → System Settings** before printing. Uploaded logos and saved details belong to that installation; they are not part of the source published to GitHub.
 

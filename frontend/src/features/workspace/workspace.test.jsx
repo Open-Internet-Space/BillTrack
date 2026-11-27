@@ -1,8 +1,32 @@
 import { act, fillInput, signedInApp } from "../../test-support/app";
 
+test('sidebar history restores the opened section and its allottee context', async () => {
+  const { container, close } = await signedInApp();
+  const sidebar = container.querySelector('.app-sidebar');
+  const button = name => [...sidebar.querySelectorAll('button')].find(item => item.textContent === name);
+  const current = () => sidebar.querySelector('[aria-current="page"]').textContent;
+  try {
+    expect(button('Back').disabled).toBe(true);
+    expect(button('Forward').disabled).toBe(true);
+    await act(async () => button('Allotments').click());
+    await act(async () => container.querySelector('[aria-label="Raise bill for Test Allottee"]').click());
+    expect(current()).toBe('Bills');
+    expect(container.querySelector('#bills-tenant').value).toBe('1');
+    await act(async () => button('Back').click());
+    expect(current()).toBe('Allotments');
+    await act(async () => button('Forward').click());
+    expect(current()).toBe('Bills');
+    expect(container.querySelector('#bills-tenant').value).toBe('1');
+    await act(async () => button('Back').click());
+    await act(async () => button('Payments').click());
+    expect(current()).toBe('Payments');
+    expect(button('Forward').disabled).toBe(true);
+  } finally { close(); }
+});
+
 test.each([
   ['Dashboard', ['tenants', 'bills', 'dashboard']],
-  ['Allottees', ['tenants']],
+  ['Allotments', ['tenants']],
   ['Bills', ['bills']],
   ['Payments', ['tenants', 'payments']],
   ['Payment Adjustments', ['tenants', 'bills', 'payments']],

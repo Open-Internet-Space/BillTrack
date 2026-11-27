@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from estate_app.models import Allotment, Shop, Tenant
+from estate_app.models import ActivityEntry, Allotment, Bill, Shop, Tenant
 from estate_app.tests.transaction_case import ActivityTransactionTestCase
 
 
@@ -83,6 +83,34 @@ class EstateChargeTests(TestCase):
         self.assertTrue(charge.overdue)
         with patch('django.utils.timezone.localdate',return_value=dt.date(2026,12,31)):
             self.assertEqual(charge.balance_due,Decimal('780'))
+
+    def test_print_extension_fee_demand_reads_existing_assessment_and_receipts(self):
+        from estate_app.models import SystemSettings
+
+        profile = SystemSettings.get_settings()
+        profile.letterhead_name = 'Synthetic Estate Office'
+        profile.save(update_fields=['letterhead_name'])
+        fee = self.charge(kind='extension_fee', tax_amount=Decimal('180'), description='Extension for second year')
+        self.receipt(fee, amount=Decimal('400.25'))
+        url = f'/api/estate-charges/{fee.pk}/demand/'
+        self.assertEqual(self.client.get(url, HTTP_HOST='localhost').status_code, 401)
+        self.client.force_login(User.objects.create_user('demand-reader'))
+        counts = (Bill.objects.count(), self.Charge.objects.count(), self.Receipt.objects.count(), ActivityEntry.objects.count())
+        response = self.client.get(url, HTTP_HOST='localhost')
+        self.assertEqual(response['Cache-Control'], 'private, no-store')
+        for value in ('Extension fee demand', self.term.tenant.name, 'Extension for second year',
+                      'Invoice Date', '__________/_________/20_________',
+                      '1,000.00', '180.00', '1,180.00', '400.25', '779.75', 'Paise Seventy Five',
+                      'Billed To', 'Dues Summary', 'Payment Status', 'Total Payable', 'Bank Details',
+                      'Remarks', 'Print / Save PDF'):
+            self.assertContains(response, value)
+        self.assertNotContains(response, 'GST on Rent')
+        self.assertNotContains(response, 'Assessment date')
+        self.assertNotContains(response, 'Due date')
+        self.assertNotContains(response, fee.authority_reference)
+        self.assertEqual(counts, (Bill.objects.count(), self.Charge.objects.count(), self.Receipt.objects.count(), ActivityEntry.objects.count()))
+        fine = self.charge()
+        self.assertEqual(self.client.get(f'/api/estate-charges/{fine.pk}/demand/', HTTP_HOST='localhost').status_code, 404)
 
     def test_receipts_cannot_overpay_or_claim_unpaired_security_application(self):
         charge=self.charge()
@@ -190,7 +218,7 @@ class EstateChargeApiTests(TestCase):
         self.assertEqual(response.data['source'],'receipt')
         detail=self.api.get(f'/api/estate-charges/{self.charge.pk}/').data
         self.assertEqual(detail['balance_due'],'600.00')
-        self.assertEqual(detail['shop_code'],'CHARGE-101')
+        self.assertEqual(detail['register_label'], self.term.register_label)
 
     def test_waiver_preview_is_read_only_bound_and_idempotent(self):
         from estate_app.models import ActivityEntry
@@ -253,9 +281,36 @@ class EstateChargeApiTests(TestCase):
     def test_assessments_and_security_sources_cannot_be_forged_or_erased(self):
         url=f'/api/estate-charges/{self.charge.pk}/'
         self.assertEqual(self.api.patch(url,{'waiver_amount':'1000','change_reason':'Attempt direct waiver'},format='json').status_code,400)
-        self.assertEqual(self.api.get(url+'deletion-preview/').status_code,400)
+        self.assertEqual(self.api.get(url+'deletion-preview/').status_code,403)
         self.assertEqual(self.api.post('/api/estate-charge-payments/',{'charge':self.charge.pk,'amount':'100',
             'payment_date':'2026-11-02','receipt_reference':'Unpaired operation','source':'security_application'},format='json').status_code,400)
+
+    def test_mistaken_charge_deletion_requires_audited_confirmation_and_no_history(self):
+        self.charge.created_by = self.staff
+        self.charge.save(update_fields=['created_by'])
+        url = f'/api/estate-charges/{self.charge.pk}/'
+        self.assertTrue(self.api.get(url).data['can_delete'])
+        preview = self.api.get(url + 'deletion-preview/')
+        self.assertEqual(preview.status_code, 200, preview.data)
+        self.assertEqual(self.api.delete(url, {'confirmation': preview.data['confirmation']}, format='json').status_code, 400)
+        self.payment()
+        self.assertFalse(self.api.get(url).data['can_delete'])
+        blocked = self.api.delete(url, {'change_reason': 'Entered in error', 'confirmation': preview.data['confirmation']}, format='json')
+        self.assertEqual(blocked.status_code, 400, blocked.data)
+        self.assertTrue(self.Receipt.objects.filter(charge=self.charge).exists())
+
+        mistaken = assessed_charge(self.term, kind='damage_recovery', created_by=self.staff)
+        url = f'/api/estate-charges/{mistaken.pk}/'
+        token = self.api.get(url + 'deletion-preview/').data['confirmation']
+        other = User.objects.create_user('other-charge-staff')
+        self.api.force_authenticate(other)
+        payload = {'change_reason': 'Duplicate assessment entered in error', 'confirmation': token}
+        self.assertEqual(self.api.delete(url, payload, format='json').status_code, 403)
+        self.api.force_authenticate(self.staff)
+        self.assertEqual(self.api.delete(url, payload, format='json').status_code, 204)
+        self.assertFalse(type(mistaken).objects.filter(pk=mistaken.pk).exists())
+        self.assertTrue(ActivityEntry.objects.filter(record_type='estate_app.estatecharge', record_id=str(mistaken.pk),
+            action='delete', reason=payload['change_reason'], actor_id=self.staff.pk).exists())
 
     def test_financial_confirmation_rejects_other_reviewers_expiry_and_bad_input(self):
         import time

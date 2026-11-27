@@ -13,6 +13,26 @@ def validate_invoice_logo_size(upload):
 class SystemSettings(models.Model):
     """System-wide configuration - Only one record should exist"""
 
+    premises_enabled = models.BooleanField('Enable Premises', default=False,
+        help_text='Show the premises register and allow optional links on allotment terms.')
+    allotment_details_enabled = models.BooleanField('Show additional allotment details', default=False,
+        help_text='Show notice, measurement, charge approval and possession or handover fields on allotment forms.')
+
+    new_signups_enabled = models.BooleanField('New signups', default=True)
+    bill_email_enabled = models.BooleanField('Bills email communication', default=True,
+        help_text='Allow BillTrack to send bill reminder emails.')
+    bill_email_copy_enabled = models.BooleanField('Bills email format for copying', default=True,
+        help_text='Allow staff to generate and copy bill email drafts.')
+
+    @classmethod
+    def feature_enabled(cls, name):
+        value = cls.objects.filter(pk=1).values_list(name, flat=True).first()
+        return cls._meta.get_field(name).get_default() if value is None else value
+
+    @classmethod
+    def premises_are_enabled(cls):
+        return cls.objects.filter(pk=1, premises_enabled=True).exists()
+
     # Penalty Settings
     PENALTY_TYPE_CHOICES = [
         ('percentage', 'Percentage (% per annum)'),
@@ -64,6 +84,7 @@ class SystemSettings(models.Model):
     invoice_remarks = models.TextField(blank=True, default='')
 
     email_draft_cc = models.CharField(max_length=2000, blank=True, default='', validators=[validate_recipients], help_text='Default email draft CC addresses, separated by commas or semicolons.')
+    email_draft_bcc = models.CharField(max_length=2000, blank=True, default='', validators=[validate_recipients], verbose_name='Default email draft BCC', help_text='Separate addresses with commas or semicolons.')
 
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

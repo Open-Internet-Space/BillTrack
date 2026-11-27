@@ -12,6 +12,7 @@ class SystemSettingsAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.Mode
     readonly_fields = ['logo_preview', 'updated_at', 'updated_by']
     formfield_overrides = {models.ImageField: {'widget': forms.FileInput}}
     fieldsets = [
+        ('Estate features', {'fields': ['premises_enabled', 'allotment_details_enabled', 'new_signups_enabled', 'bill_email_enabled', 'bill_email_copy_enabled']}),
         ('Letterhead', {'fields': ['letterhead_logo', 'logo_preview', 'letterhead_name',
                                   'letterhead_department', 'letterhead_address']}),
         ('Billed from', {'fields': ['billed_from', 'supplier_gstin', 'place_of_supply']}),
@@ -21,7 +22,7 @@ class SystemSettingsAdmin(CorrectionAdminMixin, PaginationAdminMixin, admin.Mode
         ('Payment information', {'fields': ['bank_details', 'invoice_remarks']}),
         ('Penalty calculation', {'fields': ['penalty_type', 'penalty_rate_pa', 'penalty_lumpsum', 'penalty_frequency']}),
         ('GST calculation', {'fields': ['gst_applicable', 'gst_rate', 'cgst_rate', 'sgst_rate']}),
-        ('Manual email drafts', {'fields': ['email_draft_cc']}),
+        ('Manual email drafts', {'fields': ['email_draft_cc', 'email_draft_bcc']}),
         ('Last updated', {'fields': ['updated_at', 'updated_by']}),
     ]
 

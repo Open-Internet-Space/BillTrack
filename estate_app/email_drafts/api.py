@@ -5,13 +5,20 @@ from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from ..account_security.service import permitted
-from ..models import EmailTemplate
+from ..models import EmailTemplate, SystemSettings
 from .service import generate
 
 
 class ApprovedUser(BasePermission):
     def has_permission(self, request, view):
         return bool(request.user.is_authenticated and permitted(request.user))
+
+
+class DraftCopyEnabled(BasePermission):
+    message = 'Bill email drafts for copying are disabled in System Settings.'
+
+    def has_permission(self, request, view):
+        return SystemSettings.feature_enabled('bill_email_copy_enabled')
 
 
 class GenerationInput(serializers.Serializer):
@@ -33,7 +40,7 @@ class TemplateSerializer(serializers.ModelSerializer):
 
 @method_decorator(never_cache, name='dispatch')
 class EmailTemplateViewSet(viewsets.ReadOnlyModelViewSet):
-    permission_classes = [ApprovedUser]
+    permission_classes = [ApprovedUser, DraftCopyEnabled]
     queryset = EmailTemplate.objects.filter(active=True)
     serializer_class = TemplateSerializer
     pagination_class = None
@@ -42,7 +49,7 @@ class EmailTemplateViewSet(viewsets.ReadOnlyModelViewSet):
 @method_decorator(never_cache, name='dispatch')
 class EmailDraftViewSet(viewsets.GenericViewSet):
     """Merge a named template into a temporary email; no persistence or sending."""
-    permission_classes = [ApprovedUser]
+    permission_classes = [ApprovedUser, DraftCopyEnabled]
     serializer_class = GenerationInput
 
     @action(detail=False, methods=['post'])

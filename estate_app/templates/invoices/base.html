@@ -16,7 +16,7 @@
 </style>
 </head>
 <body>
-{% include "invoices/toolbar.html" %}
+{% block toolbar %}{% include "invoices/toolbar.html" %}{% endblock %}
 {% block content %}{% endblock %}
 {% include "invoices/print_script.html" %}
 </body>

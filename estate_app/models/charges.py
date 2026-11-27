@@ -53,7 +53,7 @@ class EstateCharge(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.allotment.shop.code} · {self.get_kind_display()} · {self.authority_reference}'
+        return f'{self.allotment.register_label} · {self.get_kind_display()} · {self.authority_reference}'
 
     @property
     def gross_amount(self):

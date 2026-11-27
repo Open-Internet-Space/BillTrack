@@ -4,7 +4,7 @@ import FilterBar, { matchesSearch, withinDates } from "../../Filters";
 import RefreshButton from "../../RefreshButton";
 import { AdjustmentBill } from "./AdjustmentBill.jsx";
 
-export function PaymentAdjustments({ payments, bills, refresh, refreshing }) {
+export function PaymentAdjustments({ payments, bills, refresh, refreshing, onEditReceipt }) {
   const [vendor, setVendor] = useState("");
   const [filters, setFilters] = useState({ search: "", year: "all", month: "all", from: "", to: "" });
   const years = [...new Set(payments.map(p => p.bill_year).filter(Boolean))].sort((a, b) => b - a);
@@ -51,7 +51,7 @@ export function PaymentAdjustments({ payments, bills, refresh, refreshing }) {
       {vendor && <Pagination pagination={pagination} label="bills" />}
       {vendor && (matchingGroups.length ? pagination.pageRows.map(([billId, splits]) => {
         const bill = billsById.get(billId);
-        return <AdjustmentBill key={billId} bill={bill} splits={splits} allSplits={groups.get(billId)} resetKey={filters} />;
+        return <AdjustmentBill key={billId} bill={bill} splits={splits} allSplits={groups.get(billId)} resetKey={filters} onEditReceipt={onEditReceipt} />;
       }) : <div className="card" style={{ color: "#8b949e" }}>No matching payments for this allottee.</div>)}
     </div>
   );

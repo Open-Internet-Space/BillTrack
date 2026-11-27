@@ -25,7 +25,7 @@ def validate_sender():
 
 
 class TemplateSelectionForm(forms.Form):
-    template = forms.ModelChoiceField(queryset=EmailTemplate.objects.filter(active=True), label='Email template')
+    template = forms.ModelChoiceField(queryset=EmailTemplate.objects.filter(active=True, manual_only=False), label='Email template')
 
 
 class EmailPreviewForm(forms.Form):
@@ -55,6 +55,8 @@ def prepare_messages(selected, template, user_id, today=None):
         raise ValidationError(f'Select between 1 and {MAX_PREVIEWS} allottees for a preview.')
     if not template.active:
         raise ValidationError('Choose an active email template.')
+    if template.manual_only:
+        raise ValidationError('Choose a template available for reminders.')
     validate_sender()
     groups = {group['uuid']: group for group in preview(today)[0]}
     if not set(selected).issubset(groups):

@@ -1,3 +1,4 @@
+from ..models import SystemSettings
 from ..activity.admin import CorrectionAdminMixin
 import smtplib
 from django import forms
@@ -49,6 +50,7 @@ def reminder_view(request):
     if not request.user.is_superuser:
         raise PermissionDenied
     config=ReminderSettings.objects.filter(pk=1).first() or ReminderSettings(pk=1)
+    bill_email_enabled=SystemSettings.feature_enabled('bill_email_enabled')
     form=TestMailForm()
     template_form=TemplateSelectionForm()
     preview_forms=None
@@ -56,6 +58,8 @@ def reminder_view(request):
     if request.method=='POST':
         action=request.POST.get('action')
         try:
+            if action in ('test', 'prepare', 'confirm_send') and not bill_email_enabled:
+                raise ValidationError('Bills email communication is disabled in System Settings.')
             if action=='test':
                 form=TestMailForm(request.POST)
                 if form.is_valid():
@@ -109,8 +113,8 @@ def reminder_view(request):
     if preview_forms is not None:
         return TemplateResponse(request,'admin/email_reminder_preview.html',{**admin.site.each_context(request),
             'title':'Review emails before sending','preview_forms':preview_forms,'preview_error':preview_error,'from_email':settings.DEFAULT_FROM_EMAIL})
-    groups,skipped=preview()
-    context={**admin.site.each_context(request),'title':'Email reminders','config':config,
+    groups,skipped=preview() if bill_email_enabled else ([], {})
+    context={**admin.site.each_context(request),'title':'Email reminders','config':config,'bill_email_enabled':bill_email_enabled,
        'configured':mail_configured(),'verified':bool(config.verified_config and config.verified_config==smtp_fingerprint()),
        'groups':groups,'skipped':skipped,'test_form':form,'template_form':template_form,
        'recent':ReminderDelivery.objects.all()[:30],

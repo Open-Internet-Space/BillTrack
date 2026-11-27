@@ -3,8 +3,9 @@ const path = require('node:path');
 const MarkdownIt = require('markdown-it');
 
 const guides = [
-  ['Daily work', 'ESTATE-WORKFLOW', 'Shops and allotment workflow', 'Create shops, record renewals and handovers, and track expiry, charges and deposits.'],
-  ['Daily work', 'LISTS-AND-FILTERS', 'Find records and use filters', 'Search, filter, refresh and move through bills, payments and allottees.'],
+  ['Daily work', 'ESTATE-WORKFLOW', 'Allotment register and estate workflows', 'Find allotments, record terms and handovers, and track expiry, charges and deposits.'],
+  ['Daily work', 'EXTENSIONS-AND-SECURITY-DEPOSITS', 'Extensions and security deposits', 'Assess and print extension fees, link renewals, review and carry forward deposits, and record date exceptions.'],
+  ['Daily work', 'LISTS-AND-FILTERS', 'Find records and use filters', 'Search, filter, refresh and move through bills, payments and allotments.'],
   ['Billing and collections', 'RECEIPT-BILLING', 'Legacy bill receipt and deadlines', 'Confirm receipt and understand the five-day rule for older bills.'],
   ['Billing and collections', 'INVOICES-AND-SETTINGS', 'Print invoices and set invoice layout', 'Print one bill or a selection and manage invoice branding.'],
   ['Billing and collections', 'REPORTS', 'Reports and exports', 'Review estate dues, cash receipts, held security and historical reports.'],

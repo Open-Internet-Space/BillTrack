@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export const ModalOverlay = ({ children, onClose, saving, error, sessionExpired, onSignIn }) => {
+export const ModalOverlay = ({ children, onClose, saving, error, sessionExpired, onSignIn, titleId = 'modal-title' }) => {
   const dialogRef = useRef(null);
   useEffect(() => {
     const trigger = document.activeElement;
@@ -11,8 +11,8 @@ export const ModalOverlay = ({ children, onClose, saving, error, sessionExpired,
       if (trigger?.isConnected) trigger.focus();
     };
   }, []);
-  return <dialog ref={dialogRef} className="app-dialog" aria-labelledby="modal-title" aria-busy={saving}
-    onCancel={event => { event.preventDefault(); if (!saving) onClose(); }}>
+  return <dialog ref={dialogRef} className="app-dialog" aria-labelledby={titleId} aria-busy={saving}
+    onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!saving) onClose(); }}>
     <fieldset disabled={saving} className="dialog-fields">{children}</fieldset>
     {saving && <p role="status" className="form-feedback">Saving… Please wait.</p>}
     {error && <p role="alert" className="form-feedback form-error">{error}</p>}

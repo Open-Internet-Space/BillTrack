@@ -56,7 +56,7 @@ class SecurityMovement(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.original_award.shop.code} · {self.kind} · {self.amount} · {self.reference}'
+        return f'{self.original_award.register_label} · {self.kind} · {self.amount} · {self.reference}'
 
     def clean(self):
         if not self._state.adding:
@@ -72,8 +72,10 @@ class SecurityMovement(models.Model):
             raise ValidationError('Security belongs to the original award, not a separate renewal deposit.')
         if not self.reference.strip() or not self.reason.strip():
             raise ValidationError('Record the actual payment/approval reference and reason.')
-        if self.effective_date and (self.effective_date < root.letter_issued_on or self.effective_date > timezone.localdate()):
-            raise ValidationError('A security movement must be dated between the original letter and today.')
+        if self.effective_date and self.effective_date > timezone.localdate():
+            raise ValidationError('A security movement cannot be dated in the future.')
+        if self.kind != 'received' and self.effective_date and self.effective_date < root.letter_issued_on:
+            raise ValidationError('A security debit cannot precede the original award letter.')
         if self.kind != 'received':
             if not (getattr(self, '_security_authorized', False) and self.recorded_by.is_superuser):
                 raise ValidationError('Use the reviewed superuser action for a security debit.')

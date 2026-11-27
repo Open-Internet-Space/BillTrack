@@ -17,7 +17,7 @@ def selected_invoice_contexts(bills):
     system_settings = SystemSettings.get_settings()
     by_tenant = {}
     for bill in bills:
-        group = by_tenant.setdefault((bill.tenant_id, bill.allotment_id, bill.is_draft), {})
+        group = by_tenant.setdefault((bill.tenant_id, bill.is_draft), {})
         group[bill.pk] = bill
     invoices = []
     for group in by_tenant.values():

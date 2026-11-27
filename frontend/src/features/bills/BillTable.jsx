@@ -1,7 +1,31 @@
-import { formatCurrency } from "../../shared/format.js";
+import { formatCurrency, formatDate } from "../../shared/format.js";
 import { StatusBadge } from "../../shared/Badges.jsx";
 
-export function BillTable({ user, allSelected, toggleAllBills, pageRows, selectedSet, toggleBillSelection, openInvoice, setModal, deleteBill }) {
+function ExtensionFeeRow({ row, openDemand, openCharge, setModal }) {
+  const { charge } = row;
+  const cell = { padding: '10px 14px' };
+  return <tr className="row-hover" style={{ borderBottom: '1px solid #21262d' }}>
+    <td style={cell}></td>
+    <td style={cell}><strong>{row.invoice_no}</strong><br />{charge.description}</td>
+    <td style={cell}>{row.tenant_display_name || row.tenant_name}</td>
+    <td style={cell}><small>Assessed</small><br />{formatDate(charge.assessed_on)}</td>
+    <td style={cell}>{formatCurrency(charge.gross_amount)}
+      {Number(charge.waiver_amount) > 0 && <><br /><small>Waived {formatCurrency(charge.waiver_amount)}</small></>}
+    </td>
+    <td style={cell}>{formatCurrency(charge.amount_paid)}</td>
+    <td style={cell}>—</td>
+    <td style={cell}>—</td>
+    <td style={cell}>{formatCurrency(charge.balance_due)}</td>
+    <td style={cell}><StatusBadge status={charge.status} /></td>
+    <td style={cell}><div className="estate-actions">
+      <button className="btn-ghost" onClick={() => openDemand(charge)}>Print extension fee demand</button>
+      <button className="btn-ghost" onClick={() => openCharge(charge)}>Charge details</button>
+      {Number(charge.balance_due) > 0 && <button className="btn-primary" onClick={() => setModal({ type: 'estateChargePayment', charge })}>Record charge receipt</button>}
+    </div></td>
+  </tr>;
+}
+
+export function BillTable({ user, allSelected, toggleAllBills, canSelectAll, pageRows, selectedSet, toggleBillSelection, openInvoice, openDemand, openCharge, setModal, deleteBill }) {
   return (<div className="card table-scroll" tabIndex={0} role="region" aria-label="Scrollable records" style={{ padding: 0 }}>
         <table>
           <thead>
@@ -10,6 +34,7 @@ export function BillTable({ user, allSelected, toggleAllBills, pageRows, selecte
                 <input
                   type="checkbox"
                   checked={allSelected}
+                  disabled={!canSelectAll}
                   onChange={toggleAllBills}
                   aria-label="Select all bills"
                 />
@@ -27,7 +52,7 @@ export function BillTable({ user, allSelected, toggleAllBills, pageRows, selecte
             </tr>
           </thead>
           <tbody>
-            {pageRows.map(b => (
+            {pageRows.map(b => b.charge ? <ExtensionFeeRow key={b.id} row={b} openDemand={openDemand} openCharge={openCharge} setModal={setModal} /> : (
               <tr key={b.id} className="row-hover" style={{ borderBottom: "1px solid #21262d" }}>
                 <td style={{ padding: "10px 14px" }}>
                   <input
@@ -37,7 +62,13 @@ export function BillTable({ user, allSelected, toggleAllBills, pageRows, selecte
                     aria-label={`Select bill ${b.invoice_no || b.id}`}
                   />
                 </td>
-                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#f0a500" }}>{b.invoice_no || "[Pending]"}</td>
+                <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: "#f0a500" }}>
+                  {b.invoice_no || "[Pending]"}
+                  <div style={{ marginTop: 6 }}>
+                    <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: 11 }}
+                      onClick={() => setModal({ type: "billReceipts", data: b })}>Payment receipts</button>
+                  </div>
+                </td>
                 <td style={{ padding: "10px 14px" }}>{(b.tenant_display_name || b.tenant_name)}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{b.month_name} {b.year}</td>
                 <td style={{ padding: "10px 14px", fontFamily: "'JetBrains Mono',monospace", fontSize: 13 }}>{formatCurrency(b.total_amount)}</td>

@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from estate_app.tests.test_estate_charges import charge_term
+from estate_app.tests.test_estate_charges import charge_term, settle_extension_fee
 from estate_app.tests.transaction_case import ActivityTransactionTestCase
 
 
@@ -191,6 +191,71 @@ class SecurityApiTests(TestCase):
         self.assertEqual(result.data['recorded_by'],self.staff.pk)
         self.api.force_authenticate(self.boss)
         return result
+
+    def test_carry_forward_records_renewal_choice_without_a_second_receipt(self):
+        from estate_app.models import ActivityEntry, SecurityMovement
+
+        settle_extension_fee(self.term)
+        payload = dict(tenant=self.term.tenant_id, renewal_of=self.term.pk,
+            award_reference='Reviewed extension', letter_issued_on='2026-11-13', start_date='2027-01-01',
+            end_date='2027-12-31', actual_area='150', measurement_reference='Original measurement',
+            approval_reference='Renewal approval', performance_reference='Performance review', carry_forward_deposit=True)
+        rejected = self.api.post('/api/allotments/', payload, format='json')
+        self.assertEqual(rejected.status_code, 400, rejected.data)
+        self.assertIn('carry_forward_deposit', rejected.data)
+        self.receive('5500')
+        renewed = self.api.post('/api/allotments/', {**payload, 'carry_forward_deposit': False}, format='json')
+        self.assertEqual(renewed.status_code, 201, renewed.data)
+        saved = self.api.patch(f"/api/allotments/{renewed.data['id']}/",
+            {'carry_forward_deposit': True, 'change_reason': 'Allottee chose to retain the deposit'}, format='json')
+        self.assertEqual(saved.status_code, 200, saved.data)
+        self.assertIs(saved.data['carry_forward_deposit'], True)
+        self.assertEqual(saved.data['original_award_id'], self.term.pk)
+        self.assertEqual(SecurityMovement.objects.count(), 1)
+        self.assertEqual(self.api.get(self.url).data['held'], '5500.00')
+        audit = ActivityEntry.objects.filter(record_type='estate_app.allotment', record_id=renewed.data['id'], action='update').latest('id')
+        self.assertTrue(audit.after['carry_forward_deposit'])
+
+    def test_handover_clearance_respects_the_admin_switch(self):
+        from estate_app.models import SystemSettings
+
+        message = 'Physical handover of the final term is not confirmed.'
+        self.assertNotIn(message, self.api.get(self.url).data['clearance_issues'])
+        settings, _ = SystemSettings.objects.get_or_create(pk=1)
+        settings.allotment_details_enabled = True
+        settings.save(update_fields=['allotment_details_enabled'])
+        issues = self.api.get(self.url).data['clearance_issues']
+        self.assertIn(message, issues)
+        self.assertIn('The final approved term has not ended.', issues)
+
+    def test_receipt_can_precede_the_original_letter_and_survive_review_and_export(self):
+        from estate_app.data_transfer.serialization import export_data, validate_data
+
+        receipt = self.api.post('/api/security-movements/', dict(original_award=self.term.pk, amount='5500',
+            effective_date='2025-12-26', reference='Synthetic advance voucher', reason='Documented advance deposit'), format='json')
+        self.assertEqual(receipt.status_code, 201, receipt.data)
+        _, result = self.confirm(self.requirement())
+        self.assertEqual(result.data['account']['held'], '5500.00')
+        self.assertEqual(result.data['account']['outstanding_requirement'], '0.00')
+        validate_data(export_data())
+
+    def test_deposit_timing_uses_offer_deadline_or_order_date_and_preserves_legacy_terms(self):
+        from estate_app.data_transfer.serialization import export_data, validate_data
+
+        _, legacy = self.confirm(self.requirement())
+        self.assertEqual((legacy.data['account']['timing'], legacy.data['account']['due_date']), ('', '2026-01-08'))
+        before = {**self.requirement(), 'timing': 'before', 'offer_date': '2025-12-15'}
+        bad = self.api.post(self.url+'decision-preview/', {**before, 'pre_order_due_date': '2026-01-02'}, format='json')
+        self.assertEqual(bad.status_code, 400)
+        _, saved = self.confirm({**before, 'pre_order_due_date': '2025-12-28'})
+        account = saved.data['account']
+        self.assertEqual((account['timing'], account['offer_date'], account['due_date']), ('before', '2025-12-15', '2025-12-28'))
+        validate_data(export_data())
+        _, cutoff = self.confirm({**before, 'pre_order_due_date': None})
+        self.assertEqual(cutoff.data['account']['due_date'], '2026-01-01')
+        _, after = self.confirm({**self.requirement(), 'timing': 'after'})
+        account = after.data['account']
+        self.assertEqual((account['timing'], account['offer_date'], account['due_date']), ('after', None, '2026-01-08'))
 
     def test_requirement_preview_has_no_writes_and_confirmation_is_bound_and_idempotent(self):
         from estate_app.models import ActivityEntry

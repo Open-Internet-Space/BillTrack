@@ -43,6 +43,7 @@
   .meta-val { font-weight: 600; color: var(--ink); }
   .meta-val.inv-no { font-family: 'EB Garamond', serif; font-size: 11pt; color: var(--accent); }
   .recipient-name { font-weight: 700; font-size: 11pt; color: var(--ink); }
+  .recipient-description { overflow-wrap: anywhere; }
 
   /* ── Section Title ── */
   .sec-title {

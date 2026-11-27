@@ -1,6 +1,7 @@
 {% extends "admin/base_site.html" %}
 {% block content %}
 <h1>Email reminders</h1>
+{% if bill_email_enabled %}
 <p>Preview is read-only. Send uses the current recorded balances and email addresses. At most one accepted reminder per allottee per day.</p>
 <p>Schedule relative to due date: −1, 0, +1, +7, +14, +26, +41, then every 15 days. Stop three calendar months after confirmed receipt.</p>
 <p>SMTP: {% if configured %}Configured{% else %}<strong>Not configured — add the sender and app password to the private .env.</strong>{% endif %}.
@@ -23,7 +24,7 @@ Current configuration test: {% if verified %}accepted{% else %}not verified{% en
 <fieldset class="module">
 <h3><label><input type="checkbox" name="allottee" value="{{ group.uuid }}"> {{ group.allottee.display_name }} — {{ group.email }}</label></h3>
 <table><caption>Eligible outstanding bills</caption><thead><tr><th>Period / reference</th><th>Due date</th><th>Scheduled reminder</th><th>Principal</th><th>Penalty</th><th>Total (INR)</th></tr></thead>
-<tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}{% if item.shop %}<br>{{ item.shop }} · {{ item.award }}{% endif %}{% if item.policy == 'notices_368_369' %}<br>Notice invoice · emailed {{ item.receipt_date }}{% endif %}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
+<tbody>{% for item in group.items %}<tr><td>{{ item.period }} / {{ item.reference }}{% if item.award %}<br>{{ item.award }}{% endif %}{% if item.policy == 'notices_368_369' %}<br>Notice invoice · emailed {{ item.receipt_date }}{% endif %}</td><td>{{ item.due_date }}</td><td>{{ item.scheduled_date }}</td><td>{{ item.principal }}</td><td>{{ item.penalty }}</td><td>{{ item.total }}</td></tr>{% endfor %}</tbody></table>
 <p>Combined total: INR {{ group.total|floatformat:2 }}</p>
 </fieldset>
 {% empty %}<p>No reminders are currently eligible.</p>{% endfor %}
@@ -32,6 +33,7 @@ Current configuration test: {% if verified %}accepted{% else %}not verified{% en
 </form>
 <h3>Skipped bills</h3><ul>{% for reason,count in skipped.items %}<li>{{ reason }}: {{ count }}</li>{% empty %}<li>None</li>{% endfor %}</ul>
 </div>
+{% else %}<p role="status">Bills email communication is disabled in System Settings.</p>{% endif %}
 <div class="module"><h2>Uncertain / interrupted submissions</h2>
 <p>Do not retry until you check provider activity. A message may have been accepted even if BillTrack could not record success.</p>
 {% for row in uncertain %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="release"><input type="hidden" name="submission" value="{{ row.pk }}">
