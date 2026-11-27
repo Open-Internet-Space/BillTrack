@@ -10,6 +10,12 @@ Every bill. Every payment. In view.
 
 An [Open Internet](https://www.anopeninternet.eu.org/) Project, developed independently as a personal project for billing and estate management.
 
+## Deployment scope
+
+BillTrack v2.0.0 is intended for local or access-controlled private installations. Keep the live application, database, uploaded files, credentials, logs, exports, and backups private.
+
+**Do not update Django for this release.** Use the tested dependencies in `requirements.txt`, including `Django==4.2.11`. Django 4.2 no longer receives security fixes. Keep BillTrack off the public internet until a separately tested dependency upgrade is available. See the [Django support notice](https://www.djangoproject.com/weblog/2026/apr/07/security-releases/) and [security policy](SECURITY.md).
+
 ## Which folder is for what?
 
 | Folder | What it is for |

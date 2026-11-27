@@ -1,6 +1,8 @@
 # Security policy
 
-Report vulnerabilities privately to the repository owner, without credentials or customer data. No public internet deployment or full vulnerability audit is implied by source preparation.
+Use [GitHub private vulnerability reporting](https://github.com/Open-Internet-Space/BillTrack/security/advisories/new) when available, or contact the repository owner privately. Include the BillTrack version and relevant details with synthetic records. Keep credentials, recovery codes, database files, and real customer data out of reports.
+
+BillTrack v2.0.0 is intended for local or access-controlled private installations. **Do not update Django for this release.** The tested pin is `Django==4.2.11`. Django 4.2 is out of security support, so keep the live application off the public internet until a separately tested upgrade is available.
 
 Production requires DEBUG=False and a private SECRET_KEY. Keep .env variants, SQLite/WAL files, media, logs, exports and backups out of source control. Organisation configuration is stored only in local SQLite/media. Backups contain bank/tax details, account secrets and recovery counters; filesystem permissions and private storage remain essential.
 
