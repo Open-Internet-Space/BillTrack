@@ -1,4 +1,6 @@
-# BillTrack
+# BillTrack — Estate Management & Billing
+
+BillTrack helps estate offices manage allotments, renewals, rent, and collections. Staff can track upcoming expiries, apply rent revisions and holiday waivers, raise invoices and extension fee demands, and record payments and security deposits. The dashboard brings outstanding dues and follow-up actions into view, and the searchable Knowledge Base guides staff through daily workflows.
 
 Estate management, allotment-wise billing and staff guides. See the [changelog](CHANGELOG.md), [estate workflow](docs/ESTATE-WORKFLOW.md), and [extensions and security deposits tutorial](docs/EXTENSIONS-AND-SECURITY-DEPOSITS.md).
 
